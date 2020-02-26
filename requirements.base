@@ -1,0 +1,8 @@
+aiohttp
+boto3
+click
+gitpython
+marshmallow
+marshmallow-enum
+PyYAML
+sentry-sdk

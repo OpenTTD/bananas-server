@@ -25,7 +25,7 @@ jobs:
     - name: Flake8
       uses: TrueBrain/actions-flake8@master
       with:
-        path: content_server
+        path: bananas_server
 
   black:
     name: Black
@@ -41,4 +41,4 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install black
-        black -l 120 --check content_server
+        black -l 120 --check bananas_server

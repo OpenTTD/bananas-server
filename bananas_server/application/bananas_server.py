@@ -41,6 +41,34 @@ class Application:
             tags=content_entry.tags,
         )
 
+    def _safe_name(self, name):
+        new_name = ""
+
+        for letter in name:
+            if (
+                (letter >= "a" and letter <= "z")
+                or (letter >= "A" and letter <= "Z")
+                or (letter >= "0" and letter <= "9")
+                or letter == "."
+            ):
+                new_name += letter
+            elif new_name[-1] != "_":
+                new_name += "_"
+
+        return new_name
+
+    def _safe_filename(self, name, version):
+        return self._safe_name(name) + "-" + self._safe_name(version)
+
+    def get_by_content_id(self, content_id):
+        return self._by_content_id.get(content_id)
+
+    def get_by_unique_id(self, content_type, unique_id):
+        return self._by_unique_id[content_type].get(unique_id)
+
+    def get_by_unique_id_and_md5sum(self, content_type, unique_id, md5sum):
+        return self._by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
+
     def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version):
         version_major = (openttd_version >> 28) & 0xF
         version_minor = (openttd_version >> 24) & 0xF
@@ -57,29 +85,29 @@ class Application:
 
     def receive_PACKET_CONTENT_CLIENT_INFO_EXTID(self, source, content_infos):
         for content_info in content_infos:
-            content_entry = self._by_unique_id[content_info.content_type].get(content_info.unique_id)
+            content_entry = self.get_by_unique_id(content_info.content_type, content_info.unique_id)
             if content_entry:
                 self._send_content_entry(source, content_entry)
 
     def receive_PACKET_CONTENT_CLIENT_INFO_EXTID_MD5(self, source, content_infos):
         for content_info in content_infos:
-            content_entry = (
-                self._by_unique_id_and_md5sum[content_info.content_type]
-                .get(content_info.unique_id, {})
-                .get(content_info.md5sum)
+            content_entry = self.get_by_unique_id_and_md5sum(
+                content_info.content_type, content_info.unique_id, content_info.md5sum
             )
             if content_entry:
                 self._send_content_entry(source, content_entry)
 
     def receive_PACKET_CONTENT_CLIENT_INFO_ID(self, source, content_infos):
         for content_info in content_infos:
-            content_entry = self._by_content_id.get(content_info.content_id)
+            content_entry = self.get_by_content_id(content_info.content_id)
             if content_entry:
                 self._send_content_entry(source, content_entry)
 
     def receive_PACKET_CONTENT_CLIENT_CONTENT(self, source, content_infos):
         for content_info in content_infos:
-            content_entry = self._by_content_id[content_info.content_id]
+            content_entry = self.get_by_content_id(content_info.content_id)
+            if not content_entry:
+                continue
 
             try:
                 stream = self.storage.get_stream(content_entry)
@@ -91,15 +119,9 @@ class Application:
                 content_type=content_entry.content_type,
                 content_id=content_entry.content_id,
                 filesize=content_entry.filesize,
-                filename=f"{content_entry.name} - {content_entry.version}",
+                filename=self._safe_filename(content_entry.name, content_entry.version),
                 stream=stream,
             )
-
-    def get_by_content_id(self, content_id):
-        return self._by_content_id.get(content_id)
-
-    def get_by_unique_id_and_md5sum(self, content_type, unique_id, md5sum):
-        return self._by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
 
     def reload_md5sum_mapping(self):
         for content_type in ContentType:

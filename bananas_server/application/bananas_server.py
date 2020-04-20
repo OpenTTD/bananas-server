@@ -52,10 +52,11 @@ class Application:
                 or letter == "."
             ):
                 new_name += letter
-            elif new_name[-1] != "_":
+            elif new_name and new_name[-1] != "_":
                 new_name += "_"
 
-        return new_name
+        return new_name.strip("._")
+
 
     def _safe_filename(self, name, version):
         return self._safe_name(name) + "-" + self._safe_name(version)

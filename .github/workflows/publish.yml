@@ -56,8 +56,7 @@ jobs:
         name: ${{ steps.vars.outputs.name }}
         tag: ${{ steps.vars.outputs.tag }}
 
-    # Dorpsgek only runs on production, not on staging.
-    - if: steps.vars.outputs.dry-run == 'false' && steps.vars.outputs.environment == 'production'
+    - if: steps.vars.outputs.dry-run == 'false'
       name: Trigger deployment
       uses: openttd/actions/deployments-create@v1
       with:

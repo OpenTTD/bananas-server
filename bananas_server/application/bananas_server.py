@@ -57,7 +57,6 @@ class Application:
 
         return new_name.strip("._")
 
-
     def _safe_filename(self, name, version):
         return self._safe_name(name) + "-" + self._safe_name(version)
 

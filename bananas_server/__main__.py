@@ -17,6 +17,7 @@ from .index.local import click_index_local
 from .storage.local import click_storage_local
 from .storage.s3 import click_storage_s3
 from .openttd import tcp_content
+from .openttd.tcp_content import click_proxy_protocol
 
 log = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ def click_logging():
 @click_index_github
 @web_routes.click_web_routes
 @click.option("--validate", help="Only validate BaNaNaS files and exit", is_flag=True)
+@click_proxy_protocol
 def main(bind, content_port, web_port, storage, index, validate):
     app_instance = Application(storage(), index())
 

@@ -73,7 +73,7 @@ class Application:
         version_major = (openttd_version >> 28) & 0xF
         version_minor = (openttd_version >> 24) & 0xF
         version_patch = (openttd_version >> 20) & 0xF
-        version = (version_major, version_minor, version_patch)
+        version = [version_major, version_minor, version_patch]
 
         for content_entry in self._by_content_type[content_type]:
             if content_entry.min_version and version < content_entry.min_version:

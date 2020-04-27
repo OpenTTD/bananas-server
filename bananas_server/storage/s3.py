@@ -27,6 +27,7 @@ class Storage:
             raise Exception("--storage-s3-bucket has to be given if storage is s3")
 
         self._s3 = boto3.client("s3")
+        self._folder_cache = None
 
     def _get_filename(self, content_entry):
         content_type_folder_name = get_folder_name_from_content_type(content_entry.content_type)
@@ -35,7 +36,7 @@ class Storage:
 
         return f"{content_type_folder_name}/{unique_id}/{md5sum}.tar.gz"
 
-    def _get_folder_list(self, folder, continuation_token=None):
+    def _get_full_folder_list(self, folder, continuation_token=None):
         kwargs = {}
         if continuation_token:
             kwargs["ContinuationToken"] = continuation_token
@@ -49,19 +50,36 @@ class Storage:
             objects.add(obj["Key"])
 
         if response.get("NextContinuationToken"):
-            objects.update(self._get_folder_list(folder, continuation_token=response["NextContinuationToken"]))
+            objects.update(self._get_full_folder_list(folder, continuation_token=response["NextContinuationToken"]))
 
         return objects
+
+    def _get_folder_list(self, folder_search):
+        # List all files on the S3, and cache it. Otherwise we will be doing
+        # a lot of API calls, and that is very slow.
+        if self._folder_cache is None:
+            self._folder_cache = self._get_full_folder_list("")
+
+        # Filter out the request based on the cache. We are a generator to
+        # not create yet-an-other-list in memory.
+        for folder in self._folder_cache:
+            if folder.startswith(folder_search):
+                yield folder
+
+    def clear_cache(self):
+        self._folder_cache = None
 
     def list_folder(self, content_type, unique_id=None):
         content_type_folder_name = get_folder_name_from_content_type(content_type)
 
         if unique_id is None:
             folders = self._get_folder_list(content_type_folder_name)
-            return [folder.split("/")[1] for folder in folders]
-
-        folders = self._get_folder_list(f"{content_type_folder_name}/{unique_id}")
-        return [folder.split("/")[2] for folder in folders]
+            for folder in folders:
+                yield folder.split("/")[1]
+        else:
+            folders = self._get_folder_list(f"{content_type_folder_name}/{unique_id}")
+            for folder in folders:
+                yield folder.split("/")[2]
 
     def get_stream(self, content_entry):
         filename = self._get_filename(content_entry)

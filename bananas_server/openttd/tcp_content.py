@@ -22,12 +22,15 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
         self._data = b""
         self.new_connection = True
 
-        asyncio.create_task(self._process_queue())
+        self.task = asyncio.create_task(self._process_queue())
 
     def connection_made(self, transport):
         self.transport = transport
         socket_addr = transport.get_extra_info("peername")
         self.source = Source(self, socket_addr, socket_addr[0], socket_addr[1])
+
+    def connection_lost(self, exc):
+        self.task.cancel()
 
     def _detect_source_ip_port(self, data):
         if not self.proxy_protocol:

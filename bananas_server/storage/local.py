@@ -32,6 +32,9 @@ class Storage:
 
         return f"{self.folder}/{content_type_folder_name}/{unique_id}/{md5sum}.tar.gz"
 
+    def clear_cache(self):
+        pass
+
     def list_folder(self, content_type, unique_id=None):
         content_type_folder_name = get_folder_name_from_content_type(content_type)
 

@@ -123,6 +123,8 @@ class Application:
             )
 
     def reload_md5sum_mapping(self):
+        self.storage.clear_cache()
+
         for content_type in ContentType:
             if content_type == ContentType.CONTENT_TYPE_END:
                 continue

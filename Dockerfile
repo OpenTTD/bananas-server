@@ -8,9 +8,15 @@ LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.build-date=${BUILD_DATE}
 LABEL org.label-schema.version=${BUILD_VERSION}
 
+# git is a dependency of the code.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
+
+# We will be connecting to github.com, so populate their key already.
+RUN mkdir -p ~/.ssh \
+    && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
 
 WORKDIR /code
 

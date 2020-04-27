@@ -19,6 +19,8 @@ class Index(LocalIndex):
             self._git = git.Repo(self._folder)
         except git.exc.NoSuchPathError:
             self._git = git.Repo.init(self._folder)
+        except git.exc.InvalidGitRepositoryError:
+            self._git = git.Repo.init(self._folder)
 
         # Make sure the origin is set correctly
         if "origin" not in self._git.remotes:

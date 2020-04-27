@@ -1,5 +1,4 @@
 import logging
-import random
 
 from collections import defaultdict
 
@@ -148,24 +147,3 @@ class Application:
         self._by_unique_id.clear()
         self._by_unique_id_and_md5sum.clear()
         self._md5sum_mapping.clear()
-
-    def _get_next_content_id(self, content_type, unique_id, md5sum):
-        # Cache the result for the livetime of this process. This means that
-        # if we reload, we keep the content_ids as they were. This avoids
-        # clients having content_ids that are no longer valid.
-        # If this process cycles, this mapping is lost. That can lead to some
-        # clients having to restart their OpenTTD, but as this is expected to
-        # be a rare event, it should be fine.
-        content_id = self._id_mapping[content_type][unique_id].get(md5sum)
-        if content_id is not None:
-            return content_id
-
-        # Pick a random content_id and check if it is not used. The total
-        # amount of available content at the time of writing is around the
-        # 5,000 entries. So the chances of hitting an existing number is
-        # very small, and this should be done pretty quick.
-        while True:
-            content_id = random.randrange(0, 2 ** 31)
-            if content_id not in self._by_content_id:
-                self._id_mapping[content_type][unique_id][md5sum] = content_id
-                return content_id

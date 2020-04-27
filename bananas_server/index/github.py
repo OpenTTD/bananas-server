@@ -29,6 +29,18 @@ class Index(LocalIndex):
         if origin.url != _github_url:
             origin.set_url(_github_url)
 
+    def _remove_empty_folders(self, parent_folder):
+        removed = False
+        for root, folders, files in os.walk(parent_folder, topdown=False):
+            if root.startswith(".git"):
+                continue
+
+            if not folders and not files:
+                os.rmdir(root)
+                removed = True
+
+        return removed
+
     def _fetch_latest(self):
         log.info("Updating index to latest version from GitHub")
 
@@ -40,6 +52,12 @@ class Index(LocalIndex):
         origin.refs.master.checkout(force=True, B="master")
         for file_name in self._git.untracked_files:
             os.unlink(f"{self._folder}/{file_name}")
+
+        # We might end up with empty folders, which the rest of the
+        # application doesn't really like. So remove them. Keep repeating the
+        # function until no folders are removed anymore.
+        while self._remove_empty_folders(self._folder):
+            pass
 
     def reload(self, application):
         self._fetch_latest()

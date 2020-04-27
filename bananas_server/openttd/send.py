@@ -74,7 +74,8 @@ class OpenTTDProtocolSend:
             data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_CONTENT)
             data += stream.read(SEND_MTU - 3)
             data = write_presend(data)
-            self.send_packet(data)
+            if not self.send_packet(data):
+                return
 
         data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_CONTENT)
         data = write_presend(data)

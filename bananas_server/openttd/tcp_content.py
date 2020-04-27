@@ -81,6 +81,11 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
 
     def send_packet(self, data):
         self.transport.write(data)
+        # When a socket is closed on the other side, and due to the nature of
+        # how asyncio is doing writes, we never receive an exception. So,
+        # instead, check every time we send something if we are not closed.
+        # If we are, inform our caller which should stop transmitting.
+        return not self.transport.is_closing()
 
 
 @click_additional_options

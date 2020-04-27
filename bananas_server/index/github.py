@@ -1,6 +1,8 @@
+import base64
 import click
 import git
 import logging
+import tempfile
 import os
 
 from .local import Index as LocalIndex
@@ -8,12 +10,24 @@ from ..helpers.click import click_additional_options
 
 log = logging.getLogger(__name__)
 
+_github_private_key = None
 _github_url = None
 
 
 class Index(LocalIndex):
     def __init__(self):
         super().__init__()
+
+        # We need to write the private key to disk: GitPython can only use
+        # SSH-keys that are written on disk.
+        if _github_private_key:
+            self._github_private_key_file = tempfile.NamedTemporaryFile()
+            self._github_private_key_file.write(_github_private_key)
+            self._github_private_key_file.flush()
+
+            self._ssh_command = f"ssh -i {self._github_private_key_file.name}"
+        else:
+            self._ssh_command = None
 
         try:
             self._git = git.Repo(self._folder)
@@ -48,12 +62,13 @@ class Index(LocalIndex):
 
         # Checkout the latest master, removing and commits/file changes local
         # might have.
-        try:
-            origin.fetch()
-        except git.exc.BadName:
-            # When the garbage collector kicks in, GitPython gets confused and
-            # throws a BadName. The best solution? Just run it again.
-            origin.fetch()
+        with self._git.git.custom_environment(GIT_SSH_COMMAND=self._ssh_command):
+            try:
+                origin.fetch()
+            except git.exc.BadName:
+                # When the garbage collector kicks in, GitPython gets confused and
+                # throws a BadName. The best solution? Just run it again.
+                origin.fetch()
 
         origin.refs.master.checkout(force=True, B="master")
         for file_name in self._git.untracked_files:
@@ -78,7 +93,15 @@ class Index(LocalIndex):
     show_default=True,
     metavar="URL",
 )
-def click_index_github(index_github_url):
-    global _github_url
+@click.option(
+    "--index-github-private-key",
+    help="Base64-encoded private key to access GitHub."
+    "Always use this via an environment variable!"
+    "(index=github only)",
+)
+def click_index_github(index_github_url, index_github_private_key):
+    global _github_url, _github_private_key
 
     _github_url = index_github_url
+    if index_github_private_key:
+        _github_private_key = base64.b64decode(index_github_private_key)

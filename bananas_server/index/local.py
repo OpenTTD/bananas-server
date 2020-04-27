@@ -3,6 +3,8 @@ import logging
 import os
 import yaml
 
+from collections import defaultdict
+
 from .schema import ContentEntry as ContentEntryTest
 from ..helpers.click import click_additional_options
 from ..helpers.content_type import get_content_type_from_name
@@ -25,6 +27,7 @@ class ContentEntry:
         url,
         description,
         unique_id,
+        upload_date,
         md5sum,
         dependencies,
         min_version,
@@ -41,6 +44,7 @@ class ContentEntry:
         self.url = url
         self.description = description
         self.unique_id = unique_id
+        self.upload_date = upload_date
         self.md5sum = md5sum
         self.raw_dependencies = dependencies
         self.dependencies = None
@@ -72,6 +76,7 @@ class ContentEntry:
             f"url={self.url!r}, "
             f"description={self.description!r}, "
             f"unique_id={self.unique_id!r}, "
+            f"upload_date={self.upload_date!r}, "
             f"md5sum={self.md5sum!r}, "
             f"dependencies={self.dependencies!r}, "
             f"min_version={self.min_version!r}, "
@@ -83,14 +88,13 @@ class ContentEntry:
 class Index:
     def __init__(self):
         self._folder = _folder
+        self._content_ids = defaultdict(list)
 
-    def _read_content_entry_version(self, content_type, unique_id, data, md5sum_mapping, get_next_content_id):
+    def _read_content_entry_version(self, content_type, unique_id, data, md5sum_mapping):
         unique_id = bytes.fromhex(unique_id)
 
         md5sum_partial = bytes.fromhex(data["md5sum-partial"])
         md5sum = md5sum_mapping[content_type][unique_id][md5sum_partial]
-
-        content_id = get_next_content_id(content_type, unique_id, md5sum)
 
         dependencies = []
         for dependency in data.get("dependencies", []):
@@ -120,7 +124,7 @@ class Index:
         ContentEntryTest().load(
             {
                 "content-type": content_type,
-                "content-id": content_id,
+                "content-id": 0,
                 "filesize": data["filesize"],
                 "name": data["name"],
                 "version": data["version"],
@@ -154,13 +158,14 @@ class Index:
 
         content_entry = ContentEntry(
             content_type=content_type,
-            content_id=content_id,
+            content_id=0,
             filesize=data["filesize"],
             name=data["name"],
             version=data["version"],
             url=data.get("url", ""),
             description=data.get("description", ""),
             unique_id=unique_id,
+            upload_date=data["upload-date"],
             md5sum=md5sum,
             dependencies=dependencies,
             min_version=min_version,
@@ -168,9 +173,18 @@ class Index:
             tags=data.get("tags", []),
         )
 
+        # Calculate the content-id we want to give him, but don't assign it
+        # just yet. When everything is read, we will check if this id is
+        # unique over the whole set.
+        # We take 24bits from the right side of the md5sum; the left side
+        # is already given to the user as an md5sum-partial, and not a
+        # secret. We only take 24bits to allow room for a counter.
+        content_id = int.from_bytes(md5sum[-3:], "little")
+        self._content_ids[content_id].append(content_entry)
+
         return content_entry
 
-    def _read_content_entry(self, content_type, folder_name, unique_id, md5sum_mapping, get_next_content_id):
+    def _read_content_entry(self, content_type, folder_name, unique_id, md5sum_mapping):
         folder_name = f"{folder_name}/{unique_id}"
 
         with open(f"{folder_name}/global.yaml") as f:
@@ -193,7 +207,7 @@ class Index:
 
                 try:
                     content_entry = self._read_content_entry_version(
-                        content_type, unique_id, version_data, md5sum_mapping, get_next_content_id
+                        content_type, unique_id, version_data, md5sum_mapping
                     )
                 except Exception:
                     log.exception(f"Failed to load entry {folder_name}/versions/{version}. Skipping.")
@@ -210,21 +224,20 @@ class Index:
         application.clear()
         application.reload_md5sum_mapping()
 
+        self._content_ids = defaultdict(list)
+
         self.load_all(
             application._by_content_id,
             application._by_content_type,
             application._by_unique_id,
             application._by_unique_id_and_md5sum,
             application._md5sum_mapping,
-            application._get_next_content_id,
         )
 
         for content_entry in application._by_content_id.values():
             content_entry.calculate_dependencies(application)
 
-    def load_all(
-        self, by_content_id, by_content_type, by_unique_id, by_unique_id_and_md5sum, md5sum_mapping, get_next_content_id
-    ):
+    def load_all(self, by_content_id, by_content_type, by_unique_id, by_unique_id_and_md5sum, md5sum_mapping):
         for content_type in ContentType:
             if content_type == ContentType.CONTENT_TYPE_END:
                 continue
@@ -240,11 +253,10 @@ class Index:
 
             for unique_id in os.listdir(folder_name):
                 content_entries, archived_content_entries = self._read_content_entry(
-                    content_type, folder_name, unique_id, md5sum_mapping, get_next_content_id
+                    content_type, folder_name, unique_id, md5sum_mapping
                 )
                 for content_entry in content_entries:
                     counter_entries += 1
-                    by_content_id[content_entry.content_id] = content_entry
                     by_unique_id_and_md5sum[content_type][content_entry.unique_id][content_entry.md5sum] = content_entry
 
                     by_content_type[content_type].append(content_entry)
@@ -252,12 +264,29 @@ class Index:
 
                 for content_entry in archived_content_entries:
                     counter_archived += 1
-                    by_content_id[content_entry.content_id] = content_entry
                     by_unique_id_and_md5sum[content_type][content_entry.unique_id][content_entry.md5sum] = content_entry
 
             log.info(
                 "Loaded %d entries and %d archived for %s", counter_entries, counter_archived, content_type_folder_name
             )
+
+        # There is a small chance the content_id, based on the md5sum, is not
+        # unique. This is why we simply add a number to indicate it is the Nth
+        # time we have seen this part of the md5sum, sorted by upload-date.
+        # This means that content_ids are stable over multiple runs, and means
+        # we can scale this server horizontally.
+        for content_id, content_entries in self._content_ids.items():
+            if len(content_entries) > 255:
+                raise Exception(
+                    "We have more than 255 hash collisions;"
+                    "content-ids would be identical for more than one package. Aborting."
+                )
+
+            for i, content_entry in enumerate(sorted(content_entries, key=lambda x: x.upload_date)):
+                content_id += i << 24
+                content_entry.content_id = content_id
+
+                by_content_id[content_id] = content_entry
 
 
 @click_additional_options

@@ -76,8 +76,9 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
             try:
                 getattr(self._callback, f"receive_{type.name}")(self.source, **kwargs)
             except Exception:
+                log.exception(f"Internal error: receive_{type.name} triggered an exception")
                 self.transport.close()
-                raise
+                return
 
     def send_packet(self, data):
         self.transport.write(data)

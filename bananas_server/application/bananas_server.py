@@ -2,6 +2,7 @@ import logging
 
 from collections import defaultdict
 
+from ..helpers.safe_filename import safe_filename
 from ..openttd.protocol.enums import ContentType
 
 log = logging.getLogger(__name__)
@@ -39,25 +40,6 @@ class Application:
             dependencies=content_entry.dependencies,
             tags=content_entry.tags,
         )
-
-    def _safe_name(self, name):
-        new_name = ""
-
-        for letter in name:
-            if (
-                (letter >= "a" and letter <= "z")
-                or (letter >= "A" and letter <= "Z")
-                or (letter >= "0" and letter <= "9")
-                or letter == "."
-            ):
-                new_name += letter
-            elif new_name and new_name[-1] != "_":
-                new_name += "_"
-
-        return new_name.strip("._")
-
-    def _safe_filename(self, name, version):
-        return self._safe_name(name) + "-" + self._safe_name(version)
 
     def get_by_content_id(self, content_id):
         return self._by_content_id.get(content_id)
@@ -118,7 +100,7 @@ class Application:
                 content_type=content_entry.content_type,
                 content_id=content_entry.content_id,
                 filesize=content_entry.filesize,
-                filename=self._safe_filename(content_entry.name, content_entry.version),
+                filename=safe_filename(content_entry.name, content_entry.version),
                 stream=stream,
             )
 

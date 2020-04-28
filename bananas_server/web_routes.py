@@ -5,6 +5,7 @@ from aiohttp import web
 
 from .helpers.click import click_additional_options
 from .helpers.content_type import get_folder_name_from_content_type
+from .helpers.safe_filename import safe_filename
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
@@ -37,11 +38,12 @@ async def balancer_handler(request):
             continue
 
         folder_name = get_folder_name_from_content_type(content_entry.content_type)
+        safe_name = safe_filename(content_entry.name, content_entry.version)
         response += (
             f"{content_id},"
             f"{content_entry.content_type.value},"
             f"{content_entry.filesize},"
-            f"{CDN_URL}/{folder_name}/{content_entry.unique_id.hex()}/{content_entry.md5sum.hex()}.tar.gz"
+            f"{CDN_URL}/{folder_name}/{content_entry.unique_id.hex()}/{content_entry.md5sum.hex()}/{safe_name}.tar.gz"
             f"\n"
         )
 

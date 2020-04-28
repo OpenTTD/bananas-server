@@ -283,10 +283,8 @@ class Index:
                 )
 
             for i, content_entry in enumerate(sorted(content_entries, key=lambda x: x.upload_date)):
-                content_id += i << 24
-                content_entry.content_id = content_id
-
-                by_content_id[content_id] = content_entry
+                content_entry.content_id = (i << 24) + content_id
+                by_content_id[content_entry.content_id] = content_entry
 
 
 @click_additional_options

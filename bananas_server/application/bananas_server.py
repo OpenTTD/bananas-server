@@ -100,7 +100,7 @@ class Application:
                 content_type=content_entry.content_type,
                 content_id=content_entry.content_id,
                 filesize=content_entry.filesize,
-                filename=safe_filename(content_entry.name, content_entry.version),
+                filename=safe_filename(content_entry),
                 stream=stream,
             )
 

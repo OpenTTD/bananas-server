@@ -15,5 +15,7 @@ def _safe_name(name):
     return new_name.strip("._")
 
 
-def safe_filename(name, version):
-    return _safe_name(name) + "-" + _safe_name(version)
+def safe_filename(content_entry):
+    return (
+        content_entry.unique_id.hex() + "-" + _safe_name(content_entry.name) + "-" + _safe_name(content_entry.version)
+    )

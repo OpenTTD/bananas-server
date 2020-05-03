@@ -38,7 +38,7 @@ async def balancer_handler(request):
             continue
 
         folder_name = get_folder_name_from_content_type(content_entry.content_type)
-        safe_name = safe_filename(content_entry.name, content_entry.version)
+        safe_name = safe_filename(content_entry)
         response += (
             f"{content_id},"
             f"{content_entry.content_type.value},"

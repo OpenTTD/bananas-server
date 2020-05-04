@@ -52,12 +52,12 @@ class ContentEntry:
         self.max_version = max_version
         self.tags = tags
 
-    def calculate_dependencies(self, application):
+    def calculate_dependencies(self, by_unique_id_and_md5sum):
         dependencies = []
 
         for dependency in self.raw_dependencies:
             (content_type, unique_id, md5sum) = dependency
-            dep_content_entry = application.get_by_unique_id_and_md5sum(content_type, unique_id, md5sum)
+            dep_content_entry = by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
             if dep_content_entry is None:
                 log.error("Invalid dependency: %r", dependency)
                 continue
@@ -88,7 +88,6 @@ class ContentEntry:
 class Index:
     def __init__(self):
         self._folder = _folder
-        self._content_ids = defaultdict(list)
 
     def _read_content_entry_version(self, content_type, unique_id, data, md5sum_mapping):
         unique_id = bytes.fromhex(unique_id)
@@ -179,8 +178,7 @@ class Index:
         # We take 24bits from the right side of the md5sum; the left side
         # is already given to the user as an md5sum-partial, and not a
         # secret. We only take 24bits to allow room for a counter.
-        content_id = int.from_bytes(md5sum[-3:], "little")
-        self._content_ids[content_id].append(content_entry)
+        content_entry.pre_content_id = int.from_bytes(md5sum[-3:], "little")
 
         return content_entry
 
@@ -220,24 +218,14 @@ class Index:
 
         return content_entries, archived_content_entries
 
-    def reload(self, application):
-        application.clear()
-        application.reload_md5sum_mapping()
+    def reload(self, md5sum_mapping):
+        by_content_id = {}
+        by_content_type = defaultdict(list)
+        by_unique_id = defaultdict(dict)
+        by_unique_id_and_md5sum = defaultdict(lambda: defaultdict(dict))
 
-        self._content_ids = defaultdict(list)
+        content_ids = defaultdict(list)
 
-        self.load_all(
-            application._by_content_id,
-            application._by_content_type,
-            application._by_unique_id,
-            application._by_unique_id_and_md5sum,
-            application._md5sum_mapping,
-        )
-
-        for content_entry in application._by_content_id.values():
-            content_entry.calculate_dependencies(application)
-
-    def load_all(self, by_content_id, by_content_type, by_unique_id, by_unique_id_and_md5sum, md5sum_mapping):
         for content_type in ContentType:
             if content_type == ContentType.CONTENT_TYPE_END:
                 continue
@@ -255,9 +243,13 @@ class Index:
                 content_entries, archived_content_entries = self._read_content_entry(
                     content_type, folder_name, unique_id, md5sum_mapping
                 )
+
                 for content_entry in content_entries:
                     counter_entries += 1
                     by_unique_id_and_md5sum[content_type][content_entry.unique_id][content_entry.md5sum] = content_entry
+
+                    content_ids[content_entry.pre_content_id].append(content_entry)
+                    del content_entry.pre_content_id
 
                     by_content_type[content_type].append(content_entry)
                     by_unique_id[content_type][content_entry.unique_id] = content_entry
@@ -265,6 +257,9 @@ class Index:
                 for content_entry in archived_content_entries:
                     counter_archived += 1
                     by_unique_id_and_md5sum[content_type][content_entry.unique_id][content_entry.md5sum] = content_entry
+
+                    content_ids[content_entry.pre_content_id].append(content_entry)
+                    del content_entry.pre_content_id
 
             log.info(
                 "Loaded %d entries and %d archived for %s", counter_entries, counter_archived, content_type_folder_name
@@ -275,7 +270,7 @@ class Index:
         # time we have seen this part of the md5sum, sorted by upload-date.
         # This means that content_ids are stable over multiple runs, and means
         # we can scale this server horizontally.
-        for content_id, content_entries in self._content_ids.items():
+        for content_id, content_entries in content_ids.items():
             if len(content_entries) > 255:
                 raise Exception(
                     "We have more than 255 hash collisions;"
@@ -285,6 +280,18 @@ class Index:
             for i, content_entry in enumerate(sorted(content_entries, key=lambda x: x.upload_date)):
                 content_entry.content_id = (i << 24) + content_id
                 by_content_id[content_entry.content_id] = content_entry
+
+        # Now everything is known, calculate the dependencies.
+        for content_entry in by_content_id.values():
+            content_entry.calculate_dependencies(by_unique_id_and_md5sum)
+
+        # defaultdict() cannot be pickled, so convert to a normal dict.
+        return (
+            by_content_id,
+            dict(by_content_type),
+            dict(by_unique_id),
+            {key: dict(value) for key, value in by_unique_id_and_md5sum.items()},
+        )
 
 
 @click_additional_options

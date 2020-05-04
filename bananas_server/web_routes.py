@@ -63,7 +63,7 @@ async def reload(request):
     if data["secret"] != RELOAD_SECRET:
         return web.HTTPNotFound()
 
-    BANANAS_SERVER_APPLICATION.reload()
+    await BANANAS_SERVER_APPLICATION.reload()
 
     return web.HTTPNoContent()
 

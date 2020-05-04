@@ -82,7 +82,7 @@ class Index(LocalIndex):
 
     def reload(self, application):
         self._fetch_latest()
-        super().reload(application)
+        return super().reload(application)
 
 
 @click_additional_options

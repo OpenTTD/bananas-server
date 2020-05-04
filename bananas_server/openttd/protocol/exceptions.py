@@ -16,3 +16,7 @@ class PacketInvalidData(PacketInvalid):
 
 class PacketTooBig(PacketInvalid):
     """The packet is too big to transmit."""
+
+
+class SocketClosed(Exception):
+    """The socket was closed by the other side."""

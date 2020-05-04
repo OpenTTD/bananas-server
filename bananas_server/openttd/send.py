@@ -15,7 +15,7 @@ from .protocol.write import (
 
 
 class OpenTTDProtocolSend:
-    def send_PACKET_CONTENT_SERVER_INFO(
+    async def send_PACKET_CONTENT_SERVER_INFO(
         self, content_type, content_id, filesize, name, version, url, description, unique_id, md5sum, dependencies, tags
     ):
         data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_INFO)
@@ -54,9 +54,9 @@ class OpenTTDProtocolSend:
             data = write_string(data, tag)
 
         data = write_presend(data)
-        self.send_packet(data)
+        await self.send_packet(data)
 
-    def send_PACKET_CONTENT_SERVER_CONTENT(self, content_type, content_id, filesize, filename, stream):
+    async def send_PACKET_CONTENT_SERVER_CONTENT(self, content_type, content_id, filesize, filename, stream):
         # First, send a packet to tell the client it will be receiving a file
         data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_CONTENT)
 
@@ -67,16 +67,15 @@ class OpenTTDProtocolSend:
         data = write_string(data, filename)
 
         data = write_presend(data)
-        self.send_packet(data)
+        await self.send_packet(data)
 
         # Next, send the content of the file over
         while not stream.eof():
             data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_CONTENT)
             data += stream.read(SEND_MTU - 3)
             data = write_presend(data)
-            if not self.send_packet(data):
-                return
+            await self.send_packet(data)
 
         data = write_init(PacketTCPContentType.PACKET_CONTENT_SERVER_CONTENT)
         data = write_presend(data)
-        self.send_packet(data)
+        await self.send_packet(data)

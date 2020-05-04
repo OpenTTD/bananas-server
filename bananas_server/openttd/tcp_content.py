@@ -2,8 +2,12 @@ import asyncio
 import click
 import logging
 
-from .protocol.exceptions import PacketInvalid
+from .protocol.exceptions import (
+    PacketInvalid,
+    SocketClosed,
+)
 from .protocol.source import Source
+from .protocol.write import SEND_MTU
 from .receive import OpenTTDProtocolReceive
 from .send import OpenTTDProtocolSend
 from ..helpers.click import click_additional_options
@@ -26,11 +30,42 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
 
     def connection_made(self, transport):
         self.transport = transport
+        # Have a buffer of several packets, after which we expect it to drain to
+        # nearly empty before we start sending again. This reduces the memory
+        # this application uses drasticly on slow connections.
+        self.transport.set_write_buffer_limits(SEND_MTU * 5, SEND_MTU * 2)
+
+        self._can_write = asyncio.Event()
+        self._can_write.set()
+
         socket_addr = transport.get_extra_info("peername")
         self.source = Source(self, socket_addr, socket_addr[0], socket_addr[1])
 
     def connection_lost(self, exc):
         self.task.cancel()
+
+    async def _check_closed(self):
+        while True:
+            # Asyncio doesn't notify us when the connection is closing, only
+            # when it is closed. Being in pause-writing means we have stuff
+            # in the buffer the client is not receiving. In asyncio language
+            # this means the transport is closing, but not closed. As such,
+            # we receive no "connection_lost" callback. Force this by resuming
+            # write operations, and on the next write it will trigger a
+            # SocketClosed exception, which triggers an abort() on the
+            # transport, releasing our resources. Yes. It is that complicated.
+            await asyncio.sleep(5)
+            if self.transport.is_closing():
+                self._can_write.set()
+                return
+
+    def pause_writing(self):
+        self._pause_task = asyncio.create_task(self._check_closed())
+        self._can_write.clear()
+
+    def resume_writing(self):
+        self._pause_task.cancel()
+        self._can_write.set()
 
     def _detect_source_ip_port(self, data):
         if not self.proxy_protocol:
@@ -74,19 +109,29 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
                 return
 
             try:
-                getattr(self._callback, f"receive_{type.name}")(self.source, **kwargs)
+                await getattr(self._callback, f"receive_{type.name}")(self.source, **kwargs)
+            except SocketClosed:
+                # The other side is closing the connection; it can happen
+                # there is still some writes in the buffer, so force a close
+                # on our side too to free the resources.
+                self.transport.abort()
+                return
             except Exception:
                 log.exception(f"Internal error: receive_{type.name} triggered an exception")
-                self.transport.close()
+                self.transport.abort()
                 return
 
-    def send_packet(self, data):
-        self.transport.write(data)
+    async def send_packet(self, data):
+        await self._can_write.wait()
+
         # When a socket is closed on the other side, and due to the nature of
         # how asyncio is doing writes, we never receive an exception. So,
         # instead, check every time we send something if we are not closed.
         # If we are, inform our caller which should stop transmitting.
-        return not self.transport.is_closing()
+        if self.transport.is_closing():
+            raise SocketClosed
+
+        self.transport.write(data)
 
 
 @click_additional_options

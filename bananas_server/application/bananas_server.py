@@ -26,8 +26,8 @@ class Application:
 
         self.reload()
 
-    def _send_content_entry(self, source, content_entry):
-        source.protocol.send_PACKET_CONTENT_SERVER_INFO(
+    async def _send_content_entry(self, source, content_entry):
+        await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
             content_type=content_entry.content_type,
             content_id=content_entry.content_id,
             filesize=content_entry.filesize,
@@ -50,7 +50,7 @@ class Application:
     def get_by_unique_id_and_md5sum(self, content_type, unique_id, md5sum):
         return self._by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
 
-    def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version):
+    async def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version):
         version_major = (openttd_version >> 28) & 0xF
         version_minor = (openttd_version >> 24) & 0xF
         version_patch = (openttd_version >> 20) & 0xF
@@ -62,29 +62,29 @@ class Application:
             if content_entry.max_version and version >= content_entry.max_version:
                 continue
 
-            self._send_content_entry(source, content_entry)
+            await self._send_content_entry(source, content_entry)
 
-    def receive_PACKET_CONTENT_CLIENT_INFO_EXTID(self, source, content_infos):
+    async def receive_PACKET_CONTENT_CLIENT_INFO_EXTID(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_unique_id(content_info.content_type, content_info.unique_id)
             if content_entry:
-                self._send_content_entry(source, content_entry)
+                await self._send_content_entry(source, content_entry)
 
-    def receive_PACKET_CONTENT_CLIENT_INFO_EXTID_MD5(self, source, content_infos):
+    async def receive_PACKET_CONTENT_CLIENT_INFO_EXTID_MD5(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_unique_id_and_md5sum(
                 content_info.content_type, content_info.unique_id, content_info.md5sum
             )
             if content_entry:
-                self._send_content_entry(source, content_entry)
+                await self._send_content_entry(source, content_entry)
 
-    def receive_PACKET_CONTENT_CLIENT_INFO_ID(self, source, content_infos):
+    async def receive_PACKET_CONTENT_CLIENT_INFO_ID(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_content_id(content_info.content_id)
             if content_entry:
-                self._send_content_entry(source, content_entry)
+                await self._send_content_entry(source, content_entry)
 
-    def receive_PACKET_CONTENT_CLIENT_CONTENT(self, source, content_infos):
+    async def receive_PACKET_CONTENT_CLIENT_CONTENT(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_content_id(content_info.content_id)
             if not content_entry:
@@ -96,7 +96,7 @@ class Application:
                 log.exception("Error with storage, aborting for this client ...")
                 return
 
-            source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
+            await source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
                 content_type=content_entry.content_type,
                 content_id=content_entry.content_id,
                 filesize=content_entry.filesize,

@@ -1,6 +1,8 @@
+import asyncio
 import logging
 
 from collections import defaultdict
+from concurrent import futures
 
 from ..helpers.safe_filename import safe_filename
 from ..openttd.protocol.enums import ContentType
@@ -16,15 +18,16 @@ class Application:
         self.index = index
         self.protocol = None
 
-        self._md5sum_mapping = defaultdict(lambda: defaultdict(dict))
+        self._by_content_id = None
+        self._by_content_type = None
+        self._by_unique_id = None
+        self._by_unique_id_and_md5sum = None
 
-        self._id_mapping = defaultdict(lambda: defaultdict(dict))
-        self._by_content_id = {}
-        self._by_content_type = defaultdict(list)
-        self._by_unique_id = defaultdict(dict)
-        self._by_unique_id_and_md5sum = defaultdict(lambda: defaultdict(dict))
+        self._reload_busy = asyncio.Event()
+        self._reload_busy.set()
 
-        self.reload()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.reload())
 
     async def _send_content_entry(self, source, content_entry):
         await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
@@ -104,8 +107,37 @@ class Application:
                 stream=stream,
             )
 
-    def reload_md5sum_mapping(self):
-        self.storage.clear_cache()
+    async def reload(self):
+        await self._reload_busy.wait()
+        self._reload_busy.clear()
+
+        try:
+            reload_helper = ReloadHelper(self.storage, self.index)
+            reload_helper.prepare()
+
+            # Run the reload in a new process, so we don't block the rest of the
+            # server while doing this job.
+            loop = asyncio.get_event_loop()
+            with futures.ProcessPoolExecutor(max_workers=1) as executor:
+                task = loop.run_in_executor(executor, reload_helper.reload)
+                (
+                    self._by_content_id,
+                    self._by_content_type,
+                    self._by_unique_id,
+                    self._by_unique_id_and_md5sum,
+                ) = await task
+        finally:
+            self._reload_busy.set()
+
+
+class ReloadHelper:
+    def __init__(self, storage, index):
+        self.storage = storage
+        self.index = index
+
+    def _get_md5sum_mapping(self):
+        log.info("Building md5sum mapping")
+        md5sum_mapping = defaultdict(lambda: defaultdict(dict))
 
         for content_type in ContentType:
             if content_type == ContentType.CONTENT_TYPE_END:
@@ -120,14 +152,14 @@ class Application:
                     md5sum_partial = bytes.fromhex(md5sum[0:8])
                     md5sum = bytes.fromhex(md5sum)
 
-                    self._md5sum_mapping[content_type][unique_id][md5sum_partial] = md5sum
+                    md5sum_mapping[content_type][unique_id][md5sum_partial] = md5sum
+
+        # defaultdict() cannot be pickled, so convert to a normal dict.
+        return {key: dict(value) for key, value in md5sum_mapping.items()}
+
+    def prepare(self):
+        self.storage.clear_cache()
 
     def reload(self):
-        self.index.reload(self)
-
-    def clear(self):
-        self._by_content_id.clear()
-        self._by_content_type.clear()
-        self._by_unique_id.clear()
-        self._by_unique_id_and_md5sum.clear()
-        self._md5sum_mapping.clear()
+        md5sum_mapping = self._get_md5sum_mapping()
+        return self.index.reload(md5sum_mapping)

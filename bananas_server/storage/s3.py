@@ -26,8 +26,18 @@ class Storage:
         if _bucket_name is None:
             raise Exception("--storage-s3-bucket has to be given if storage is s3")
 
-        self._s3 = boto3.client("s3")
+        self._s3_cache = None
         self._folder_cache = None
+
+    @property
+    def _s3(self):
+        # This class will be pickled to be used by ProcessPoolExecutor(). To
+        # prevent the unpicklable S3 client having to be transmitted over the
+        # wire, create it only after the process is created.
+        if not self._s3_cache:
+            self._s3_cache = boto3.client("s3")
+
+        return self._s3_cache
 
     def _get_filename(self, content_entry):
         content_type_folder_name = get_folder_name_from_content_type(content_entry.content_type)
@@ -67,6 +77,11 @@ class Storage:
                 yield folder
 
     def clear_cache(self):
+        # Reset the s3 instance, as it is not pickable. We are called just
+        # before a new process is created. On next use, a new object is
+        # created. Although this takes a few more cycles, the amount of times
+        # this happens makes it not worth mentioning.
+        self._s3_cache = None
         self._folder_cache = None
 
     def list_folder(self, content_type, unique_id=None):

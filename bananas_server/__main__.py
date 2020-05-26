@@ -78,10 +78,14 @@ def click_logging():
 @click_index_local
 @click_index_github
 @web_routes.click_web_routes
+@click.option(
+    "--bootstrap-unique-id",
+    help="Unique-id of the content entry to use as Base Graphic during OpenTTD client's bootstrap",
+)
 @click.option("--validate", help="Only validate BaNaNaS files and exit", is_flag=True)
 @click_proxy_protocol
-def main(bind, content_port, web_port, storage, index, validate):
-    app_instance = Application(storage(), index())
+def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, validate):
+    app_instance = Application(storage(), index(), bootstrap_unique_id)
 
     if validate:
         return

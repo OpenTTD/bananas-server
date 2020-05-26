@@ -11,12 +11,17 @@ log = logging.getLogger(__name__)
 
 
 class Application:
-    def __init__(self, storage, index):
+    def __init__(self, storage, index, bootstrap_unique_id):
         super().__init__()
 
         self.storage = storage
         self.index = index
         self.protocol = None
+
+        if bootstrap_unique_id:
+            self._bootstrap_unique_id = bytes.fromhex(bootstrap_unique_id)
+        else:
+            self._bootstrap_unique_id = None
 
         self._by_content_id = None
         self._by_content_type = None
@@ -59,7 +64,24 @@ class Application:
         version_patch = (openttd_version >> 20) & 0xF
         version = [version_major, version_minor, version_patch]
 
+        bootstrap_content_entry = None
+
+        # Make sure the first entry we sent is the bootstrap base graphics,
+        # as this is the one the OpenTTD client will use in the bootstrap.
+        if content_type == ContentType.CONTENT_TYPE_BASE_GRAPHICS and self._bootstrap_unique_id:
+            bootstrap_content_entry = self.get_by_unique_id(
+                ContentType.CONTENT_TYPE_BASE_GRAPHICS, self._bootstrap_unique_id
+            )
+
+            if not bootstrap_content_entry:
+                log.error(f"Bootstrap package with unique-id {self._bootstrap_unique_id} not found")
+            else:
+                await self._send_content_entry(source, bootstrap_content_entry)
+
         for content_entry in self._by_content_type[content_type]:
+            if content_entry == bootstrap_content_entry:
+                continue
+
             if content_entry.min_version and version < content_entry.min_version:
                 continue
             if content_entry.max_version and version >= content_entry.max_version:

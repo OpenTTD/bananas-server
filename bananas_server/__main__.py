@@ -100,7 +100,7 @@ def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, vali
 
     web.run_app(webapp, host=bind, port=web_port, access_log_class=ErrorOnlyAccessLogger)
 
-    log.info(f"Shutting down bananas_server ...")
+    log.info("Shutting down bananas_server ...")
     server.close()
 
 

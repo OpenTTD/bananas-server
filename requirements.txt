@@ -10,7 +10,7 @@ docutils==0.16
 gitdb==4.0.5
 GitPython==3.1.7
 idna==2.10
-jmespath==0.9.5
+jmespath==0.10.0
 marshmallow==3.5.1
 marshmallow-enum==1.5.1
 multidict==4.7.5

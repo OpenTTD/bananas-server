@@ -105,7 +105,8 @@ class Storage:
 
 @click_additional_options
 @click.option(
-    "--storage-s3-bucket", help="Name of the bucket to upload the files. (storage=s3 only)",
+    "--storage-s3-bucket",
+    help="Name of the bucket to upload the files. (storage=s3 only)",
 )
 def click_storage_s3(storage_s3_bucket):
     global _bucket_name

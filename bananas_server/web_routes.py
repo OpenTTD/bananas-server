@@ -81,7 +81,8 @@ async def fallback(request):
 
 @click_additional_options
 @click.option(
-    "--reload-secret", help="Secret to allow an index reload. Always use this via an environment variable!",
+    "--reload-secret",
+    help="Secret to allow an index reload. Always use this via an environment variable!",
 )
 @click.option(
     "--cdn-url",

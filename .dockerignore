@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
 /.env
+/.git/**
 /BaNaNaS
 /local_storage

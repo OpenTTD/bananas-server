@@ -21,4 +21,4 @@ sentry-sdk==0.18.0
 six==1.15.0
 smmap==3.0.4
 urllib3==1.25.10
-yarl==1.5.1
+yarl==1.6.0

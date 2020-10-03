@@ -130,6 +130,10 @@ class Application:
                 # Reading from the backend failed; we don't have many options
                 # except to abort the connection and hope the user retries.
                 raise SocketClosed
+            except SocketClosed:
+                # The user terminated it's connection; our caller knows how to
+                # handle this signal.
+                raise
             except Exception:
                 log.exception("Error with storage, aborting for this client ...")
                 raise SocketClosed

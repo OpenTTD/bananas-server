@@ -1,6 +1,9 @@
 import boto3
 import click
 
+from urllib3.exceptions import ProtocolError
+
+from .exceptions import StreamReadError
 from ..helpers.click import click_additional_options
 from ..helpers.content_type import get_folder_name_from_content_type
 
@@ -13,7 +16,10 @@ class Stream:
         self.filesize = filesize
 
     def read(self, count):
-        data = self.fp.read(count)
+        try:
+            data = self.fp.read(count)
+        except ProtocolError:
+            raise StreamReadError
         self.filesize -= len(data)
         return data
 

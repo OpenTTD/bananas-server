@@ -6,6 +6,8 @@ from concurrent import futures
 
 from ..helpers.safe_filename import safe_filename
 from ..openttd.protocol.enums import ContentType
+from ..openttd.protocol.exceptions import SocketClosed
+from ..storage.exceptions import StreamReadError
 
 log = logging.getLogger(__name__)
 
@@ -121,13 +123,18 @@ class Application:
                 log.exception("Error with storage, aborting for this client ...")
                 return
 
-            await source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
-                content_type=content_entry.content_type,
-                content_id=content_entry.content_id,
-                filesize=content_entry.filesize,
-                filename=safe_filename(content_entry),
-                stream=stream,
-            )
+            try:
+                await source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
+                    content_type=content_entry.content_type,
+                    content_id=content_entry.content_id,
+                    filesize=content_entry.filesize,
+                    filename=safe_filename(content_entry),
+                    stream=stream,
+                )
+            except StreamReadError:
+                # Reading from the backend failed; we don't have many options
+                # except to abort the connection and hope the user retries.
+                raise SocketClosed
 
     async def reload(self):
         await self._reload_busy.wait()

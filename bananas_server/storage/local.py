@@ -12,6 +12,12 @@ class Stream:
         self.fp = open(filename, "rb")
         self.filesize = filesize
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.fp.close()
+
     def read(self, count):
         data = self.fp.read(count)
         self.filesize -= len(data)

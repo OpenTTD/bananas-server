@@ -15,6 +15,12 @@ class Stream:
         self.fp = fp
         self.filesize = filesize
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
+
     def read(self, count):
         try:
             data = self.fp.read(count)

@@ -118,22 +118,20 @@ class Application:
                 continue
 
             try:
-                stream = self.storage.get_stream(content_entry)
-            except Exception:
-                log.exception("Error with storage, aborting for this client ...")
-                return
-
-            try:
-                await source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
-                    content_type=content_entry.content_type,
-                    content_id=content_entry.content_id,
-                    filesize=content_entry.filesize,
-                    filename=safe_filename(content_entry),
-                    stream=stream,
-                )
+                with self.storage.get_stream(content_entry) as stream:
+                    await source.protocol.send_PACKET_CONTENT_SERVER_CONTENT(
+                        content_type=content_entry.content_type,
+                        content_id=content_entry.content_id,
+                        filesize=content_entry.filesize,
+                        filename=safe_filename(content_entry),
+                        stream=stream,
+                    )
             except StreamReadError:
                 # Reading from the backend failed; we don't have many options
                 # except to abort the connection and hope the user retries.
+                raise SocketClosed
+            except Exception:
+                log.exception("Error with storage, aborting for this client ...")
                 raise SocketClosed
 
     async def reload(self):

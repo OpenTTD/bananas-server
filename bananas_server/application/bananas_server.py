@@ -80,7 +80,7 @@ class Application:
             else:
                 await self._send_content_entry(source, bootstrap_content_entry)
 
-        for content_entry in self._by_content_type[content_type]:
+        for content_entry in self._by_content_type.get(content_type, []):
             if content_entry == bootstrap_content_entry:
                 continue
 

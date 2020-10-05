@@ -1,10 +1,10 @@
 import boto3
 import click
 
+from openttd_helpers import click_helper
 from urllib3.exceptions import ProtocolError
 
 from .exceptions import StreamReadError
-from ..helpers.click import click_additional_options
 from ..helpers.content_type import get_folder_name_from_content_type
 
 _bucket_name = None
@@ -115,7 +115,7 @@ class Storage:
         return Stream(response["Body"], response["ContentLength"])
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--storage-s3-bucket",
     help="Name of the bucket to upload the files. (storage=s3 only)",

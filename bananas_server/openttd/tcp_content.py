@@ -2,6 +2,8 @@ import asyncio
 import click
 import logging
 
+from openttd_helpers import click_helper
+
 from .protocol.exceptions import (
     PacketInvalid,
     SocketClosed,
@@ -10,7 +12,6 @@ from .protocol.source import Source
 from .protocol.write import SEND_MTU
 from .receive import OpenTTDProtocolReceive
 from .send import OpenTTDProtocolSend
-from ..helpers.click import click_additional_options
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
         self.transport.write(data)
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--proxy-protocol",
     help="Enable Proxy Protocol (v1), and expect all incoming package to have this header.",

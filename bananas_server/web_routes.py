@@ -2,8 +2,8 @@ import click
 import logging
 
 from aiohttp import web
+from openttd_helpers import click_helper
 
-from .helpers.click import click_additional_options
 from .helpers.content_type import get_folder_name_from_content_type
 from .helpers.safe_filename import safe_filename
 
@@ -79,7 +79,7 @@ async def fallback(request):
     return web.HTTPNotFound()
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--reload-secret",
     help="Secret to allow an index reload. Always use this via an environment variable!",

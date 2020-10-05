@@ -4,5 +4,6 @@ click
 gitpython
 marshmallow
 marshmallow-enum
+openttd-helpers
 PyYAML
 sentry-sdk

@@ -1,7 +1,8 @@
 import click
 import os
 
-from ..helpers.click import click_additional_options
+from openttd_helpers import click_helper
+
 from ..helpers.content_type import get_folder_name_from_content_type
 
 _folder = None
@@ -60,7 +61,7 @@ class Storage:
         return Stream(filename, content_entry.filesize)
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--storage-local-folder",
     help="Folder to use for storage. (storage=local only)",

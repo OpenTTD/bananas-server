@@ -5,8 +5,9 @@ import logging
 import tempfile
 import os
 
+from openttd_helpers import click_helper
+
 from .local import Index as LocalIndex
-from ..helpers.click import click_additional_options
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class Index(LocalIndex):
         return super().reload(application)
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--index-github-url",
     help="Repository URL on GitHub. (index=github only)",

@@ -4,14 +4,12 @@ import logging
 
 from aiohttp import web
 from aiohttp.web_log import AccessLogger
+from openttd_helpers import click_helper
+from openttd_helpers.logging_helper import click_logging
+from openttd_helpers.sentry_helper import click_sentry
 
 from . import web_routes
 from .application.bananas_server import Application
-from .helpers.click import (
-    click_additional_options,
-    import_module,
-)
-from .helpers.sentry import click_sentry
 from .index.github import click_index_github
 from .index.local import click_index_local
 from .storage.local import click_storage_local
@@ -20,8 +18,6 @@ from .openttd import tcp_content
 from .openttd.tcp_content import click_proxy_protocol
 
 log = logging.getLogger(__name__)
-
-CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 class ErrorOnlyAccessLogger(AccessLogger):
@@ -46,14 +42,7 @@ async def run_server(application, bind, port):
     return server
 
 
-@click_additional_options
-def click_logging():
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO
-    )
-
-
-@click.command(context_settings=CONTEXT_SETTINGS)
+@click_helper.command()
 @click_logging  # Should always be on top, as it initializes the logging
 @click_sentry
 @click.option(
@@ -65,7 +54,7 @@ def click_logging():
     "--storage",
     type=click.Choice(["local", "s3"], case_sensitive=False),
     required=True,
-    callback=import_module("bananas_server.storage", "Storage"),
+    callback=click_helper.import_module("bananas_server.storage", "Storage"),
 )
 @click_storage_local
 @click_storage_s3
@@ -73,7 +62,7 @@ def click_logging():
     "--index",
     type=click.Choice(["local", "github"], case_sensitive=False),
     required=True,
-    callback=import_module("bananas_server.index", "Index"),
+    callback=click_helper.import_module("bananas_server.index", "Index"),
 )
 @click_index_local
 @click_index_github

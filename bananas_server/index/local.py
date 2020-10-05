@@ -4,9 +4,9 @@ import os
 import yaml
 
 from collections import defaultdict
+from openttd_helpers import click_helper
 
 from .schema import ContentEntry as ContentEntryTest
-from ..helpers.click import click_additional_options
 from ..helpers.content_type import get_content_type_from_name
 from ..helpers.content_type import get_folder_name_from_content_type
 from ..openttd.protocol.enums import ContentType
@@ -294,7 +294,7 @@ class Index:
         )
 
 
-@click_additional_options
+@click_helper.extend
 @click.option(
     "--index-local-folder",
     help="Folder to use for index storage. (index=local only)",

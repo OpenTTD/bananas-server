@@ -1,5 +1,8 @@
+import aiohttp
+import asyncio
 import click
 import logging
+import random
 
 from aiohttp import web
 from openttd_helpers import click_helper
@@ -12,7 +15,35 @@ routes = web.RouteTableDef()
 
 RELOAD_SECRET = None
 BANANAS_SERVER_APPLICATION = None
+CDN_FALLBACK_URL = None
 CDN_URL = None
+CDN_ACTIVE_URL = []
+
+
+async def check_cdn_health():
+    await asyncio.sleep(1)
+
+    log.info("Healthchecks for CDN servers %r enabled", CDN_URL)
+
+    # All servers start off as offline
+    CDN_ACTIVE_URL[:] = []
+
+    while True:
+        active_url = []
+
+        async with aiohttp.ClientSession() as session:
+            for cdn_url in CDN_URL:
+                try:
+                    async with session.get(f"{cdn_url}/healthz") as response:
+                        if response.status == 200:
+                            active_url.append(cdn_url)
+                        else:
+                            log.error(f'CDN server "{cdn_url}" failed health check: %d', response.status)
+                except Exception as e:
+                    log.error(f'CDN server "{cdn_url}" offline: %s', e)
+
+        CDN_ACTIVE_URL[:] = active_url
+        await asyncio.sleep(30)
 
 
 @routes.post("/bananas")
@@ -20,6 +51,11 @@ async def balancer_handler(request):
     data = await request.read()
 
     content_ids = data.decode().strip().split("\n")
+
+    if CDN_ACTIVE_URL:
+        cdn_url = random.choice(CDN_ACTIVE_URL)
+    else:
+        cdn_url = CDN_FALLBACK_URL
 
     response = ""
     for content_id in content_ids:
@@ -43,7 +79,7 @@ async def balancer_handler(request):
             f"{content_id},"
             f"{content_entry.content_type.value},"
             f"{content_entry.filesize},"
-            f"{CDN_URL}/{folder_name}/{content_entry.unique_id.hex()}/{content_entry.md5sum.hex()}/{safe_name}.tar.gz"
+            f"{cdn_url}/{folder_name}/{content_entry.unique_id.hex()}/{content_entry.md5sum.hex()}/{safe_name}.tar.gz"
             f"\n"
         )
 
@@ -85,13 +121,33 @@ async def fallback(request):
     help="Secret to allow an index reload. Always use this via an environment variable!",
 )
 @click.option(
-    "--cdn-url",
-    help="URL of the CDN OpenTTD clients can fetch their HTTP (not HTTPS) downloads.",
-    default="http://client-cdn.openttd.org",
+    "--cdn-fallback-url",
+    help="Fallback URL in case no --cdn-urls are healthy.",
     show_default=True,
 )
-def click_web_routes(reload_secret, cdn_url):
-    global RELOAD_SECRET, CDN_URL
+@click.option(
+    "--cdn-url",
+    help="URL of the CDN OpenTTD clients can fetch their HTTP (not HTTPS) downloads.",
+    multiple=True,
+    show_default=True,
+)
+def click_web_routes(reload_secret, cdn_fallback_url, cdn_url):
+    global RELOAD_SECRET, CDN_FALLBACK_URL, CDN_URL
 
     RELOAD_SECRET = reload_secret
-    CDN_URL = cdn_url
+
+    cdn_url = list(set(cdn_url))
+
+    # If someone sets only a single cdn-url, don't do healthchecks.
+    if len(cdn_url) == 1 and not cdn_fallback_url:
+        CDN_FALLBACK_URL = cdn_url[0]
+        CDN_URL = []
+    elif not cdn_fallback_url:
+        raise RuntimeError("Please set --cdn-fallback-url if more than one --cdn-url are given")
+    else:
+        CDN_FALLBACK_URL = cdn_fallback_url
+        CDN_URL = cdn_url
+
+        # Start health checks.
+        loop = asyncio.get_event_loop()
+        loop.create_task(check_cdn_health())

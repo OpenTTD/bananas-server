@@ -2,6 +2,7 @@ import asyncio
 import click
 import logging
 
+from asyncio.coroutines import iscoroutine
 from openttd_helpers import click_helper
 
 from .protocol.exceptions import (
@@ -22,7 +23,6 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
     def __init__(self, callback_class):
         super().__init__()
         self._callback = callback_class
-        self._callback.protocol = self
         self._queue = asyncio.Queue()
         self._data = b""
         self.new_connection = True
@@ -132,7 +132,9 @@ class OpenTTDProtocolTCPContent(asyncio.Protocol, OpenTTDProtocolReceive, OpenTT
         if self.transport.is_closing():
             raise SocketClosed
 
-        self.transport.write(data)
+        res = self.transport.write(data)
+        if iscoroutine(res):
+            await res
 
 
 @click_helper.extend

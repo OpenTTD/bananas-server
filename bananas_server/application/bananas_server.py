@@ -18,7 +18,6 @@ class Application:
 
         self.storage = storage
         self.index = index
-        self.protocol = None
 
         if bootstrap_unique_id:
             self._bootstrap_unique_id = bytes.fromhex(bootstrap_unique_id)

@@ -9,6 +9,7 @@ from openttd_helpers import click_helper
 
 from .helpers.content_type import get_folder_name_from_content_type
 from .helpers.safe_filename import safe_filename
+from .openttd.tcp_content import OpenTTDProtocolTCPContent
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
@@ -18,6 +19,33 @@ BANANAS_SERVER_APPLICATION = None
 CDN_FALLBACK_URL = None
 CDN_URL = None
 CDN_ACTIVE_URL = []
+
+
+class WebsocketTransport:
+    def __init__(self, ws, source):
+        self._ws = ws
+        self._source = source
+
+    def is_closing(self):
+        return False
+
+    async def write(self, data):
+        await self._ws.send_bytes(data)
+
+    def abort(self):
+        self._ws.do_exit = True
+
+    def close(self):
+        self._ws.do_exit = True
+
+    def get_extra_info(self, what):
+        if what != "peername":
+            raise NotImplementedError("Unknown get_extra_info() request")
+
+        return self._source
+
+    def set_write_buffer_limits(self, hard_limit, soft_limit):
+        pass
 
 
 async def check_cdn_health():
@@ -86,6 +114,40 @@ async def balancer_handler(request):
     return web.HTTPOk(body=response)
 
 
+async def websocket(request):
+    ws = web.WebSocketResponse(protocols=["binary"])
+    await ws.prepare(request)
+
+    source = request.transport.get_extra_info("peername")
+    print(source)
+
+    protocol = OpenTTDProtocolTCPContent(BANANAS_SERVER_APPLICATION)
+    protocol.proxy_protocol = False
+    protocol.connection_made(WebsocketTransport(ws, source))
+
+    ws.do_exit = False
+
+    try:
+        async for msg in ws:
+            # The transport requested that we close down.
+            if ws.do_exit:
+                await ws.close()
+                break
+
+            if msg.type == aiohttp.WSMsgType.BINARY:
+                protocol.data_received(msg.data)
+            else:
+                # Either unknown protocol or an error; either way, terminate
+                # the connection.
+                await ws.close()
+                break
+    except Exception:
+        log.exception("WebSocket exception")
+
+    protocol.connection_lost(None)
+    return ws
+
+
 @routes.post("/reload")
 async def reload(request):
     if RELOAD_SECRET is None:
@@ -107,6 +169,15 @@ async def reload(request):
 @routes.get("/healthz")
 async def healthz_handler(request):
     return web.HTTPOk()
+
+
+@routes.get("/")
+async def root(request):
+    if request.headers.get("Upgrade", "").lower().strip() == "websocket":
+        if request.headers.get("Connection", "").lower() == "upgrade":
+            await websocket(request)
+
+    return web.HTTPOk(body="")
 
 
 @routes.route("*", "/{tail:.*}")

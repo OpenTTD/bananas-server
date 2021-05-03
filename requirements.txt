@@ -1,14 +1,14 @@
 aiohttp==3.7.4.post0
 async-timeout==3.0.1
 attrs==20.3.0
-boto3==1.17.42
-botocore==1.20.42
+boto3==1.17.62
+botocore==1.20.62
 certifi==2020.12.5
 chardet==4.0.0
 click==7.1.2
-docutils==0.16
+docutils==0.17.1
 gitdb==4.0.7
-GitPython==3.1.14
+GitPython==3.1.15
 idna==3.1
 jmespath==0.10.0
 marshmallow==3.11.1
@@ -17,7 +17,7 @@ multidict==5.1.0
 openttd-helpers==1.0.1
 python-dateutil==2.8.1
 PyYAML==5.4.1
-s3transfer==0.3.6
+s3transfer==0.4.2
 sentry-sdk==1.0.0
 six==1.15.0
 smmap==4.0.0

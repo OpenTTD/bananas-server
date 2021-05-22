@@ -108,7 +108,7 @@ class Index:
         min_version = None
         max_version = None
         for com in data.get("compatibility", {}):
-            if com["name"] != "master":
+            if com["name"] not in ("master", "official"):
                 continue
 
             for conditions in com["conditions"]:

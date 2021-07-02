@@ -1,10 +1,10 @@
 # BaNaNaS Server
 
-[![GitHub License](https://img.shields.io/github/license/OpenTTD/bananas-server)](https://github.com/OpenTTD/bananas-server/blob/master/LICENSE)
+[![GitHub License](https://img.shields.io/github/license/OpenTTD/bananas-server)](https://github.com/OpenTTD/bananas-server/blob/main/LICENSE)
 [![GitHub Tag](https://img.shields.io/github/v/tag/OpenTTD/bananas-server?include_prereleases&label=stable)](https://github.com/OpenTTD/bananas-server/releases)
-[![GitHub commits since latest release](https://img.shields.io/github/commits-since/OpenTTD/bananas-server/latest/master)](https://github.com/OpenTTD/bananas-server/commits/master)
+[![GitHub commits since latest release](https://img.shields.io/github/commits-since/OpenTTD/bananas-server/latest/main)](https://github.com/OpenTTD/bananas-server/commits/main)
 
-[![GitHub Workflow Status (Testing)](https://img.shields.io/github/workflow/status/OpenTTD/bananas-server/Testing/master?label=master)](https://github.com/OpenTTD/bananas-server/actions?query=workflow%3ATesting)
+[![GitHub Workflow Status (Testing)](https://img.shields.io/github/workflow/status/OpenTTD/bananas-server/Testing/main?label=main)](https://github.com/OpenTTD/bananas-server/actions?query=workflow%3ATesting)
 [![GitHub Workflow Status (Publish Image)](https://img.shields.io/github/workflow/status/OpenTTD/bananas-server/Publish%20image?label=publish)](https://github.com/OpenTTD/bananas-server/actions?query=workflow%3A%22Publish+image%22)
 [![GitHub Workflow Status (Deployments)](https://img.shields.io/github/workflow/status/OpenTTD/bananas-server/Deployment?label=deployment)](https://github.com/OpenTTD/bananas-server/actions?query=workflow%3A%22Deployment%22)
 
@@ -14,7 +14,7 @@
 This is the server serving the in-game client for OpenTTD's content service, called BaNaNaS.
 It works together with [bananas-api](https://github.com/OpenTTD/bananas-api), which serves the HTTP API.
 
-See [introduction.md](https://github.com/OpenTTD/bananas-api/tree/master/docs/introduction.md) for more documentation about the different BaNaNaS components and how they work together.
+See [introduction.md](https://github.com/OpenTTD/bananas-api/tree/main/docs/introduction.md) for more documentation about the different BaNaNaS components and how they work together.
 
 ## Development
 

@@ -60,10 +60,21 @@ class Application:
         return self._by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
 
     async def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version):
-        version_major = (openttd_version >> 28) & 0xF
-        version_minor = (openttd_version >> 24) & 0xF
-        version_patch = (openttd_version >> 20) & 0xF
-        version = [version_major, version_minor, version_patch]
+        version_major = (openttd_version >> 24) & 0xFF
+        version_minor = (openttd_version >> 20) & 0xF
+
+        if version_major > 16 + 11:
+            # Since OpenTTD 12, major is 8 bytes and minor is 4 bytes, and
+            # no more patch. The major also needs to be subtracted by 16 to
+            # get to the real version.
+            version = [version_major - 16, version_minor]
+        else:
+            # Pre OpenTTD 12 version.
+            version_major = (openttd_version >> 28) & 0xF
+            version_minor = (openttd_version >> 24) & 0xF
+            version_patch = (openttd_version >> 20) & 0xF
+
+            version = [version_major, version_minor, version_patch]
 
         bootstrap_content_entry = None
 

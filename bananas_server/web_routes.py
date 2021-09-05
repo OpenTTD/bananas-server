@@ -6,10 +6,10 @@ import random
 
 from aiohttp import web
 from openttd_helpers import click_helper
+from openttd_protocol.protocol.content import ContentProtocol
 
 from .helpers.content_type import get_folder_name_from_content_type
 from .helpers.safe_filename import safe_filename
-from .openttd.tcp_content import OpenTTDProtocolTCPContent
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
@@ -121,7 +121,7 @@ async def websocket(request):
     source = request.transport.get_extra_info("peername")
     print(source)
 
-    protocol = OpenTTDProtocolTCPContent(BANANAS_SERVER_APPLICATION)
+    protocol = ContentProtocol(BANANAS_SERVER_APPLICATION)
     protocol.proxy_protocol = False
     protocol.connection_made(WebsocketTransport(ws, source))
 

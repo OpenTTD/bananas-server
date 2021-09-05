@@ -5,11 +5,11 @@ import yaml
 
 from collections import defaultdict
 from openttd_helpers import click_helper
+from openttd_protocol.protocol.content import ContentType
 
 from .schema import ContentEntry as ContentEntryTest
 from ..helpers.content_type import get_content_type_from_name
 from ..helpers.content_type import get_folder_name_from_content_type
-from ..openttd.protocol.enums import ContentType
 
 log = logging.getLogger(__name__)
 

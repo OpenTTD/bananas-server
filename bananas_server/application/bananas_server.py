@@ -4,9 +4,10 @@ import logging
 from collections import defaultdict
 from concurrent import futures
 
+from openttd_protocol.protocol.content import ContentType
+from openttd_protocol.wire.exceptions import SocketClosed
+
 from ..helpers.safe_filename import safe_filename
-from ..openttd.protocol.enums import ContentType
-from ..openttd.protocol.exceptions import SocketClosed
 from ..storage.exceptions import StreamReadError
 
 log = logging.getLogger(__name__)

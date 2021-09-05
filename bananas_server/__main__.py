@@ -7,6 +7,7 @@ from aiohttp.web_log import AccessLogger
 from openttd_helpers import click_helper
 from openttd_helpers.logging_helper import click_logging
 from openttd_helpers.sentry_helper import click_sentry
+from openttd_protocol.protocol.content import ContentProtocol
 
 from . import web_routes
 from .application.bananas_server import Application
@@ -14,8 +15,6 @@ from .index.github import click_index_github
 from .index.local import click_index_local
 from .storage.local import click_storage_local
 from .storage.s3 import click_storage_s3
-from .openttd import tcp_content
-from .openttd.tcp_content import click_proxy_protocol
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ async def run_server(application, bind, port):
     loop = asyncio.get_event_loop()
 
     server = await loop.create_server(
-        lambda: tcp_content.OpenTTDProtocolTCPContent(application),
+        lambda: ContentProtocol(application),
         host=bind,
         port=port,
         reuse_port=True,
@@ -72,8 +71,13 @@ async def run_server(application, bind, port):
     help="Unique-id of the content entry to use as Base Graphic during OpenTTD client's bootstrap",
 )
 @click.option("--validate", help="Only validate BaNaNaS files and exit", is_flag=True)
-@click_proxy_protocol
-def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, validate):
+@click.option(
+    "--proxy-protocol",
+    help="Enable Proxy Protocol (v1), and expect all incoming streams to have this header "
+    "(HINT: for nginx, configure proxy_requests to 1).",
+    is_flag=True,
+)
+def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, validate, proxy_protocol):
     app_instance = Application(storage(), index(), bootstrap_unique_id)
 
     if validate:
@@ -81,6 +85,8 @@ def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, vali
 
     loop = asyncio.get_event_loop()
     server = loop.run_until_complete(run_server(app_instance, bind, content_port))
+
+    ContentProtocol.proxy_protocol = proxy_protocol
 
     web_routes.BANANAS_SERVER_APPLICATION = app_instance
 

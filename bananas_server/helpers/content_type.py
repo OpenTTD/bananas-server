@@ -1,4 +1,4 @@
-from ..openttd.protocol.enums import ContentType
+from openttd_protocol.protocol.content import ContentType
 
 
 content_type_folder_name_mapping = {

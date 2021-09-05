@@ -60,22 +60,32 @@ class Application:
     def get_by_unique_id_and_md5sum(self, content_type, unique_id, md5sum):
         return self._by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
 
-    async def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version):
-        version_major = (openttd_version >> 24) & 0xFF
-        version_minor = (openttd_version >> 20) & 0xF
+    async def receive_PACKET_CONTENT_CLIENT_INFO_LIST(self, source, content_type, openttd_version, branch_versions):
+        if openttd_version != 0xFFFFFFFF:
+            version_major = (openttd_version >> 24) & 0xFF
+            version_minor = (openttd_version >> 20) & 0xF
 
-        if version_major > 16 + 11:
-            # Since OpenTTD 12, major is 8 bytes and minor is 4 bytes, and
-            # no more patch. The major also needs to be subtracted by 16 to
-            # get to the real version.
-            version = [version_major - 16, version_minor]
+            if version_major > 16 + 11:
+                # Since OpenTTD 12, major is 8 bytes and minor is 4 bytes, and
+                # no more patch. The major also needs to be subtracted by 16 to
+                # get to the real version.
+                version = [version_major - 16, version_minor]
+            else:
+                # Pre OpenTTD 12 version.
+                version_major = (openttd_version >> 28) & 0xF
+                version_minor = (openttd_version >> 24) & 0xF
+                version_patch = (openttd_version >> 20) & 0xF
+
+                version = [version_major, version_minor, version_patch]
+
+            versions = {
+                "official": version,
+            }
         else:
-            # Pre OpenTTD 12 version.
-            version_major = (openttd_version >> 28) & 0xF
-            version_minor = (openttd_version >> 24) & 0xF
-            version_patch = (openttd_version >> 20) & 0xF
+            versions = {}
 
-            version = [version_major, version_minor, version_patch]
+            for branch, version in branch_versions.items():
+                versions[branch] = [int(p) for p in version.split(".")]
 
         bootstrap_content_entry = None
 
@@ -95,10 +105,27 @@ class Application:
             if content_entry == bootstrap_content_entry:
                 continue
 
-            if content_entry.min_version and version < content_entry.min_version:
-                continue
-            if content_entry.max_version and version >= content_entry.max_version:
-                continue
+            # If no compatibility is given, it is compatible with every client.
+            # So only run the check if it contains anything.
+            if content_entry.compatibility:
+                for name, version in versions.items():
+                    if name not in content_entry.compatibility:
+                        continue
+
+                    min_version, max_version = content_entry.compatibility[name]
+                    if min_version and version < min_version:
+                        continue
+                    if max_version and version >= max_version:
+                        continue
+
+                    # Branch is in the compatibility matrix and we are in the
+                    # version range. We break here, so the else below is not
+                    # executed. This means we add the entry to the list.
+                    break
+                else:
+                    # We never found a branch for which we were compatible. So
+                    # we will be skipping this entry.
+                    continue
 
             await self._send_content_entry(source, content_entry)
 

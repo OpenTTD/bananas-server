@@ -108,7 +108,7 @@ class Index:
         min_version = None
         max_version = None
         for com in data.get("compatibility", {}):
-            if com["name"] != "official":
+            if com["name"] != "vanilla":
                 continue
 
             for conditions in com["conditions"]:

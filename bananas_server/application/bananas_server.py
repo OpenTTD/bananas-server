@@ -79,7 +79,7 @@ class Application:
                 version = [version_major, version_minor, version_patch]
 
             versions = {
-                "official": version,
+                "vanilla": version,
             }
         else:
             versions = {}

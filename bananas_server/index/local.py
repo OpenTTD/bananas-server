@@ -30,8 +30,7 @@ class ContentEntry:
         upload_date,
         md5sum,
         dependencies,
-        min_version,
-        max_version,
+        compatibility,
         tags,
     ):
         super().__init__()
@@ -48,8 +47,7 @@ class ContentEntry:
         self.md5sum = md5sum
         self.raw_dependencies = dependencies
         self.dependencies = None
-        self.min_version = min_version
-        self.max_version = max_version
+        self.compatibility = compatibility
         self.tags = tags
 
     def calculate_dependencies(self, by_unique_id_and_md5sum):
@@ -79,8 +77,7 @@ class ContentEntry:
             f"upload_date={self.upload_date!r}, "
             f"md5sum={self.md5sum!r}, "
             f"dependencies={self.dependencies!r}, "
-            f"min_version={self.min_version!r}, "
-            f"max_version={self.max_version!r}, "
+            f"compatibility={self.compatibility!r}, "
             f"tags={self.tags!r})"
         )
 
@@ -105,11 +102,10 @@ class Index:
 
             dependencies.append((dep_content_type, dep_unique_id, dep_md5sum))
 
-        min_version = None
-        max_version = None
+        compatibility = {}
         for com in data.get("compatibility", {}):
-            if com["name"] != "vanilla":
-                continue
+            min_version = None
+            max_version = None
 
             for conditions in com["conditions"]:
                 if conditions.startswith(">="):
@@ -118,6 +114,8 @@ class Index:
                     max_version = [int(p) for p in conditions[1:].split(".")]
                 else:
                     raise Exception("Invalid compatibility flag", com)
+
+            compatibility[com["name"]] = [min_version, max_version]
 
         # Validate the object to make sure all fields are within set limits.
         ContentEntryTest().load(
@@ -131,8 +129,7 @@ class Index:
                 "description": data.get("description", ""),
                 "unique-id": unique_id,
                 "md5sum": md5sum,
-                "min-version": min_version,
-                "max-version": max_version,
+                "compatibility": compatibility,
                 "tags": data.get("tags", []),
                 "raw-dependencies": dependencies,
             }
@@ -167,8 +164,7 @@ class Index:
             upload_date=data["upload-date"],
             md5sum=md5sum,
             dependencies=dependencies,
-            min_version=min_version,
-            max_version=max_version,
+            compatibility=compatibility,
             tags=data.get("tags", []),
         )
 

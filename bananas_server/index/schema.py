@@ -23,8 +23,15 @@ class ContentEntry(Schema):
     description = fields.String(validate=validate.Length(max=511))
     tags = fields.List(fields.String(validate=validate.Length(max=31)))
     md5sum = fields.Raw(validate=validate.Length(min=16, max=16))
-    min_version = fields.List(fields.Integer(), data_key="min-version", missing=None)
-    max_version = fields.List(fields.Integer(), data_key="max-version", missing=None)
+    compatibility = fields.Dict(
+        keys=fields.String(),
+        values=fields.Tuple(
+            (
+                fields.List(fields.Integer(), missing=None),
+                fields.List(fields.Integer(), missing=None),
+            )
+        ),
+    )
     raw_dependencies = fields.List(
         fields.Tuple(
             (

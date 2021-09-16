@@ -44,7 +44,7 @@ class WebsocketTransport:
 
         return self._source
 
-    def set_write_buffer_limits(self, hard_limit, soft_limit):
+    def set_write_buffer_limits(self, hard_limit=None, soft_limit=None):
         pass
 
 

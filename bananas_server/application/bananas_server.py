@@ -85,6 +85,12 @@ class Application:
             versions = {}
 
             for branch, version in branch_versions.items():
+                if not all([p.isnumeric() for p in version.split(".")]):
+                    log.warning(
+                        "CLIENT_INFO_LIST version-parts for branch '%s' contains non-integers: %s", branch, version
+                    )
+                    return
+
                 versions[branch] = [int(p) for p in version.split(".")]
 
         bootstrap_content_entry = None

@@ -24,4 +24,4 @@ six==1.16.0
 smmap==5.0.0
 typing-extensions==4.0.1
 urllib3==1.26.7
-yarl==1.6.3
+yarl==1.7.2

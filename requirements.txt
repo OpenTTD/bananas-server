@@ -9,7 +9,7 @@ click==8.0.3
 docutils==0.18.1
 gitdb==4.0.9
 GitPython==3.1.24
-idna==3.2
+idna==3.3
 jmespath==0.10.0
 marshmallow==3.13.0
 marshmallow-enum==1.5.1

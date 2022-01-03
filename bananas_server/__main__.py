@@ -93,7 +93,7 @@ def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, vali
     webapp = web.Application()
     webapp.add_routes(web_routes.routes)
 
-    web.run_app(webapp, host=bind, port=web_port, access_log_class=ErrorOnlyAccessLogger)
+    web.run_app(webapp, host=bind, port=web_port, access_log_class=ErrorOnlyAccessLogger, loop=loop)
 
     log.info("Shutting down bananas_server ...")
     server.close()

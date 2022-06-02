@@ -14,11 +14,13 @@ gitdb==4.0.9
 GitPython==3.1.27
 idna==3.3
 jmespath==1.0.0
-marshmallow==3.14.1
+marshmallow==3.16.0
 marshmallow-enum==1.5.1
 multidict==6.0.2
 openttd-helpers==1.0.1
 openttd-protocol==1.4.1
+packaging==21.3
+pyparsing==3.0.9
 python-dateutil==2.8.2
 PyYAML==6.0
 s3transfer==0.6.0

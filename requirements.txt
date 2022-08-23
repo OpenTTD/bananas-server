@@ -14,7 +14,7 @@ gitdb==4.0.9
 GitPython==3.1.27
 idna==3.3
 jmespath==1.0.1
-marshmallow==3.17.0
+marshmallow==3.17.1
 marshmallow-enum==1.5.1
 multidict==6.0.2
 openttd-helpers==1.0.1

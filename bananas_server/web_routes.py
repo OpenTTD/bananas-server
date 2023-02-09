@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
 
 RELOAD_SECRET = None
+TRUST_FORWARDED_HEADERS = False
 BANANAS_SERVER_APPLICATION = None
 CDN_FALLBACK_URL = None
 CDN_URL = None
@@ -84,6 +85,9 @@ async def balancer_handler(request):
         cdn_url = random.choice(CDN_ACTIVE_URL)
     else:
         cdn_url = CDN_FALLBACK_URL
+
+    if request.scheme == "https" or (TRUST_FORWARDED_HEADERS and request.headers.get("X-Forwarded-Proto") == "https"):
+        cdn_url = cdn_url.replace("http://", "https://")
 
     response = ""
     for content_id in content_ids:
@@ -192,20 +196,26 @@ async def fallback(request):
     help="Secret to allow an index reload. Always use this via an environment variable!",
 )
 @click.option(
+    "--trust-forwarded-headers",
+    is_flag=True,
+    help="Whether to use X-Forwarded-Proto to detect HTTPS sessions. Only use when behind a reverse proxy you trust.",
+)
+@click.option(
     "--cdn-fallback-url",
     help="Fallback URL in case no --cdn-urls are healthy.",
     show_default=True,
 )
 @click.option(
     "--cdn-url",
-    help="URL of the CDN OpenTTD clients can fetch their HTTP (not HTTPS) downloads.",
+    help="URL of the CDN OpenTTD clients can fetch their HTTP / HTTPS downloads.",
     multiple=True,
     show_default=True,
 )
-def click_web_routes(reload_secret, cdn_fallback_url, cdn_url):
-    global RELOAD_SECRET, CDN_FALLBACK_URL, CDN_URL
+def click_web_routes(reload_secret, trust_forwarded_headers, cdn_fallback_url, cdn_url):
+    global RELOAD_SECRET, CDN_FALLBACK_URL, CDN_URL, TRUST_FORWARDED_HEADERS
 
     RELOAD_SECRET = reload_secret
+    TRUST_FORWARDED_HEADERS = trust_forwarded_headers
 
     cdn_url = list(set(cdn_url))
 

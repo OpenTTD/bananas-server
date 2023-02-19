@@ -21,7 +21,7 @@ class ContentEntry(Schema):
     version = fields.String(validate=validate.Length(max=15))
     url = fields.String(validate=validate.Length(max=95))
     description = fields.String(validate=validate.Length(max=511))
-    tags = fields.List(fields.String(validate=validate.Length(max=31)))
+    classification = fields.Dict(keys=fields.String(), values=fields.String())
     md5sum = fields.Raw(validate=validate.Length(min=16, max=16))
     compatibility = fields.Dict(
         keys=fields.String(),

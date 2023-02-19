@@ -37,6 +37,17 @@ class Application:
         loop.run_until_complete(self.reload())
 
     async def _send_content_entry(self, source, content_entry):
+        # For backwards compatibility, we send classifications as tags.
+        tags = []
+        for key, value in content_entry.classification.items():
+            if type(value) == str:
+                tags.append(value)
+            elif type(value) == bool:
+                if value:
+                    tags.append(key)
+            else:
+                log.error(f"Unknown type for tag {key}: {type(value)}")
+
         await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
             content_type=content_entry.content_type,
             content_id=content_entry.content_id,
@@ -48,7 +59,7 @@ class Application:
             unique_id=content_entry.unique_id,
             md5sum=content_entry.md5sum,
             dependencies=content_entry.dependencies,
-            tags=content_entry.tags,
+            tags=tags,
         )
 
     def get_by_content_id(self, content_id):

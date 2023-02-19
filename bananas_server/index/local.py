@@ -31,7 +31,7 @@ class ContentEntry:
         md5sum,
         dependencies,
         compatibility,
-        tags,
+        classification,
     ):
         super().__init__()
 
@@ -48,7 +48,7 @@ class ContentEntry:
         self.raw_dependencies = dependencies
         self.dependencies = None
         self.compatibility = compatibility
-        self.tags = tags
+        self.classification = classification
 
     def calculate_dependencies(self, by_unique_id_and_md5sum):
         dependencies = []
@@ -78,7 +78,7 @@ class ContentEntry:
             f"md5sum={self.md5sum!r}, "
             f"dependencies={self.dependencies!r}, "
             f"compatibility={self.compatibility!r}, "
-            f"tags={self.tags!r})"
+            f"classification={self.classification!r})"
         )
 
 
@@ -130,7 +130,7 @@ class Index:
                 "unique-id": unique_id,
                 "md5sum": md5sum,
                 "compatibility": compatibility,
-                "tags": data.get("tags", []),
+                "classification": data.get("tagclassifications", {}),
                 "raw-dependencies": dependencies,
             }
         )
@@ -146,8 +146,14 @@ class Index:
         size += len(md5sum) + 2
         size += len(dependencies) * 4
         size += 1
-        for tag in data.get("tags", []):
-            size += len(tag) + 2
+        for key, value in data.get("classification", {}).items():
+            size += len(key) + 2
+            if type(value) == str:
+                size += len(value) + 2
+            elif type(value) == bool:
+                size += len("yes") + 2
+            else:
+                raise Exception("Invalid classification value", value)
 
         if size > 1400:
             raise Exception("Entry would exceed OpenTTD packet size.")
@@ -165,7 +171,7 @@ class Index:
             md5sum=md5sum,
             dependencies=dependencies,
             compatibility=compatibility,
-            tags=data.get("tags", []),
+            classification=data.get("classification", {}),
         )
 
         # Calculate the content-id we want to give him, but don't assign it

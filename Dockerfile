@@ -29,6 +29,9 @@ WORKDIR /code
 COPY requirements.txt \
         LICENSE \
         README.md \
+        region-un-m49.csv \
+        region-iso-3166-1.json \
+        region-iso-3166-2.json \
         /code/
 # Needed for Sentry to know what version we are running
 RUN echo "${BUILD_VERSION}" > /code/.version

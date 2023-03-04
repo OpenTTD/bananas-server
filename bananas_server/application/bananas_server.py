@@ -7,6 +7,7 @@ from concurrent import futures
 from openttd_protocol.protocol.content import ContentType
 from openttd_protocol.wire.exceptions import SocketClosed
 
+from ..helpers.regions import REGIONS
 from ..helpers.safe_filename import safe_filename
 from ..storage.exceptions import StreamReadError
 
@@ -36,17 +37,24 @@ class Application:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.reload())
 
+    def _tags_add_region(self, tags, region):
+        tags.add(REGIONS[region]["name"].lower())
+        if REGIONS[region]["parent"]:
+            self._tags_add_region(tags, REGIONS[region]["parent"])
+
     async def _send_content_entry(self, source, content_entry):
         # For backwards compatibility, we send classifications as tags.
-        tags = []
+        tags = set()
         for key, value in content_entry.classification.items():
             if type(value) == str:
-                tags.append(value)
+                tags.add(value)
             elif type(value) == bool:
                 if value:
-                    tags.append(key)
+                    tags.add(key)
             else:
                 log.error(f"Unknown type for tag {key}: {type(value)}")
+        for region in content_entry.regions:
+            self._tags_add_region(tags, region)
 
         await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
             content_type=content_entry.content_type,
@@ -59,7 +67,7 @@ class Application:
             unique_id=content_entry.unique_id,
             md5sum=content_entry.md5sum,
             dependencies=content_entry.dependencies,
-            tags=tags,
+            tags=list(sorted(tags)),
         )
 
     def get_by_content_id(self, content_id):

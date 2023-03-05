@@ -32,6 +32,7 @@ class ContentEntry:
         dependencies,
         compatibility,
         classification,
+        regions,
     ):
         super().__init__()
 
@@ -49,6 +50,7 @@ class ContentEntry:
         self.dependencies = None
         self.compatibility = compatibility
         self.classification = classification
+        self.regions = regions
 
     def calculate_dependencies(self, by_unique_id_and_md5sum):
         dependencies = []
@@ -78,7 +80,8 @@ class ContentEntry:
             f"md5sum={self.md5sum!r}, "
             f"dependencies={self.dependencies!r}, "
             f"compatibility={self.compatibility!r}, "
-            f"classification={self.classification!r})"
+            f"classification={self.classification!r}, "
+            f"regions={self.regions!r})"
         )
 
 
@@ -131,6 +134,7 @@ class Index:
                 "md5sum": md5sum,
                 "compatibility": compatibility,
                 "classification": data.get("tagclassifications", {}),
+                "regions": data.get("regions", []),
                 "raw-dependencies": dependencies,
             }
         )
@@ -154,6 +158,8 @@ class Index:
                 size += len("yes") + 2
             else:
                 raise Exception("Invalid classification value", value)
+        for region in data.get("regions", []):
+            size += len(region) + 2
 
         if size > 1400:
             raise Exception("Entry would exceed OpenTTD packet size.")
@@ -172,6 +178,7 @@ class Index:
             dependencies=dependencies,
             compatibility=compatibility,
             classification=data.get("classification", {}),
+            regions=data.get("regions", []),
         )
 
         # Calculate the content-id we want to give him, but don't assign it

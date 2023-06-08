@@ -8,6 +8,7 @@ from .exceptions import StreamReadError
 from ..helpers.content_type import get_folder_name_from_content_type
 
 _bucket_name = None
+_endpoint_url = None
 
 
 class Stream:
@@ -47,7 +48,7 @@ class Storage:
         # prevent the unpicklable S3 client having to be transmitted over the
         # wire, create it only after the process is created.
         if not self._s3_cache:
-            self._s3_cache = boto3.client("s3")
+            self._s3_cache = boto3.client("s3", endpoint_url=_endpoint_url)
 
         return self._s3_cache
 
@@ -120,7 +121,13 @@ class Storage:
     "--storage-s3-bucket",
     help="Name of the bucket to upload the files. (storage=s3 only)",
 )
-def click_storage_s3(storage_s3_bucket):
-    global _bucket_name
+@click.option(
+    "--storage-s3-endpoint-url",
+    help="S3 endpoint URL to reach the bucket. (storage=s3 only)",
+)
+def click_storage_s3(storage_s3_bucket, storage_s3_endpoint_url):
+    global _bucket_name, _endpoint_url
 
     _bucket_name = storage_s3_bucket
+    if storage_s3_endpoint_url:
+        _endpoint_url = storage_s3_endpoint_url

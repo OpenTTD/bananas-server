@@ -1,15 +1,6 @@
 # BaNaNaS Server
 
 [![GitHub License](https://img.shields.io/github/license/OpenTTD/bananas-server)](https://github.com/OpenTTD/bananas-server/blob/main/LICENSE)
-[![GitHub Tag](https://img.shields.io/github/v/tag/OpenTTD/bananas-server?include_prereleases&label=stable)](https://github.com/OpenTTD/bananas-server/releases)
-[![GitHub commits since latest release](https://img.shields.io/github/commits-since/OpenTTD/bananas-server/latest/main)](https://github.com/OpenTTD/bananas-server/commits/main)
-
-[![GitHub Workflow Status (Testing)](https://img.shields.io/github/actions/workflow/status/OpenTTD/bananas-server/testing.yml?branch=main&label=main)](https://github.com/OpenTTD/bananas-server/actions/workflows/testing.yml)
-[![GitHub Workflow Status (Publish Image)](https://img.shields.io/github/actions/workflow/status/OpenTTD/bananas-server/publish.yml?label=publish)](https://github.com/OpenTTD/bananas-server/actions/workflows/publish.yml)
-[![GitHub Workflow Status (Deployments)](https://img.shields.io/github/actions/workflow/status/OpenTTD/bananas-server/deployment.yml?label=deployment)](https://github.com/OpenTTD/bananas-server/actions/workflows/deployment.yml)
-
-[![GitHub deployments (Staging)](https://img.shields.io/github/deployments/OpenTTD/bananas-server/staging?label=staging)](https://github.com/OpenTTD/bananas-server/deployments)
-[![GitHub deployments (Production)](https://img.shields.io/github/deployments/OpenTTD/bananas-server/production?label=production)](https://github.com/OpenTTD/bananas-server/deployments)
 
 This is the server serving the in-game client for OpenTTD's content service, called BaNaNaS.
 It works together with [bananas-api](https://github.com/OpenTTD/bananas-api), which serves the HTTP API.

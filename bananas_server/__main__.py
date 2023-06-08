@@ -83,7 +83,7 @@ def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, vali
     if validate:
         return
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     server = loop.run_until_complete(run_server(app_instance, bind, content_port))
 
     ContentProtocol.proxy_protocol = proxy_protocol

@@ -18,12 +18,24 @@ from .storage.s3 import click_storage_s3
 
 log = logging.getLogger(__name__)
 
+# The name of the header to use for remote IP addresses.
+REMOTE_IP_HEADER = None
+
 
 class ErrorOnlyAccessLogger(AccessLogger):
     def log(self, request, response, time):
         # Only log if the status was not successful
         if not (200 <= response.status < 400):
+            if REMOTE_IP_HEADER and REMOTE_IP_HEADER in request.headers:
+                request = request.clone(remote=request.headers[REMOTE_IP_HEADER])
             super().log(request, response, time)
+
+
+@web.middleware
+async def remote_ip_header_middleware(request, handler):
+    if REMOTE_IP_HEADER in request.headers:
+        request = request.clone(remote=request.headers[REMOTE_IP_HEADER])
+    return await handler(request)
 
 
 async def run_server(application, bind, port):
@@ -70,6 +82,10 @@ async def run_server(application, bind, port):
     "--bootstrap-unique-id",
     help="Unique-id of the content entry to use as Base Graphic during OpenTTD client's bootstrap",
 )
+@click.option(
+    "--remote-ip-header",
+    help="Header which contains the remote IP address. Make sure you trust this header!",
+)
 @click.option("--validate", help="Only validate BaNaNaS files and exit", is_flag=True)
 @click.option(
     "--proxy-protocol",
@@ -77,7 +93,7 @@ async def run_server(application, bind, port):
     "(HINT: for nginx, configure proxy_requests to 1).",
     is_flag=True,
 )
-def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, validate, proxy_protocol):
+def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, remote_ip_header, validate, proxy_protocol):
     app_instance = Application(storage(), index(), bootstrap_unique_id)
 
     if validate:
@@ -91,6 +107,11 @@ def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, vali
     web_routes.BANANAS_SERVER_APPLICATION = app_instance
 
     webapp = web.Application()
+    if remote_ip_header:
+        global REMOTE_IP_HEADER
+        REMOTE_IP_HEADER = remote_ip_header.upper()
+        webapp.middlewares.insert(0, remote_ip_header_middleware)
+
     webapp.add_routes(web_routes.routes)
 
     web.run_app(webapp, host=bind, port=web_port, access_log_class=ErrorOnlyAccessLogger, loop=loop)

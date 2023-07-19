@@ -195,7 +195,7 @@ class Index:
         folder_name = f"{folder_name}/{unique_id}"
 
         with open(f"{folder_name}/global.yaml") as f:
-            global_data = yaml.safe_load(f.read())
+            global_data = yaml.load(f.read(), Loader=yaml.CSafeLoader)
 
         # If this entry is blacklisted, we won't be finding anything useful
         if global_data.get("blacklisted"):
@@ -205,7 +205,7 @@ class Index:
         archived_content_entries = []
         for version in os.listdir(f"{folder_name}/versions"):
             with open(f"{folder_name}/versions/{version}") as f:
-                version_data = yaml.safe_load(f.read())
+                version_data = yaml.load(f.read(), Loader=yaml.CSafeLoader)
 
                 # Extend the version data with global data with fields not set
                 for key, value in global_data.items():

@@ -19,6 +19,10 @@ from .helpers.safe_filename import safe_filename
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
+stats_download_http_count = Counter("bananas_server_http_download", "Number of HTTP downloads", ["content_type"])
+stats_download_http_bytes = Summary(
+    "bananas_server_http_download_bytes", "Number of bytes downloaded via HTTP (estimated)", ["content_type"]
+)
 stats_websocket_count = Counter("bananas_server_websocket", "Number of websocket connections")
 stats_websocket_duration = Summary(
     "bananas_server_websocket_duration_seconds", "Duration, in seconds, websockets has been open"
@@ -115,6 +119,13 @@ async def balancer_handler(request):
         if content_entry is None:
             log.info("Invalid ID '%d' requested; skipping ..", content_id)
             continue
+
+        stats_download_http_count.labels(
+            content_type=get_folder_name_from_content_type(content_entry.content_type)
+        ).inc()
+        stats_download_http_bytes.labels(
+            content_type=get_folder_name_from_content_type(content_entry.content_type)
+        ).observe(content_entry.filesize)
 
         folder_name = get_folder_name_from_content_type(content_entry.content_type)
         safe_name = safe_filename(content_entry)

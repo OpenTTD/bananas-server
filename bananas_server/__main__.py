@@ -8,6 +8,10 @@ from openttd_helpers import click_helper
 from openttd_helpers.logging_helper import click_logging
 from openttd_helpers.sentry_helper import click_sentry
 from openttd_protocol.protocol.content import ContentProtocol
+from prometheus_client import (
+    Info,
+    metrics,
+)
 
 from . import web_routes
 from .application.bananas_server import Application
@@ -20,6 +24,9 @@ log = logging.getLogger(__name__)
 
 # The name of the header to use for remote IP addresses.
 REMOTE_IP_HEADER = None
+
+# Disable the "_created" metrics, as they are not useful.
+metrics._use_created = False
 
 
 class ErrorOnlyAccessLogger(AccessLogger):
@@ -94,6 +101,10 @@ async def run_server(application, bind, port):
     is_flag=True,
 )
 def main(bind, content_port, web_port, storage, index, bootstrap_unique_id, remote_ip_header, validate, proxy_protocol):
+    with open(".version") as f:
+        release = f.readline().strip()
+    Info("bananas_server", "BaNaNaS Server").info({"version": release})
+
     app_instance = Application(storage(), index(), bootstrap_unique_id)
 
     if validate:

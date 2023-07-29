@@ -3,15 +3,26 @@ import logging
 
 from collections import defaultdict
 from concurrent import futures
+from prometheus_client import (
+    Counter,
+    Summary,
+)
 
 from openttd_protocol.protocol.content import ContentType
 from openttd_protocol.wire.exceptions import SocketClosed
 
+from ..helpers.content_type import get_folder_name_from_content_type
 from ..helpers.regions import REGIONS
 from ..helpers.safe_filename import safe_filename
 from ..storage.exceptions import StreamReadError
 
 log = logging.getLogger(__name__)
+stats_download_count = Counter("bananas_server_tcp_download", "Number of downloads", ["content_type"])
+stats_download_bytes = Summary("bananas_server_tcp_download_bytes", "Bytes used for downloads", ["content_type"])
+stats_listing_count = Counter("bananas_server_tcp_listing", "Number of listings", ["content_type"])
+stats_listing_bytes = Summary("bananas_server_tcp_listing_bytes", "Bytes used for listings", ["content_type"])
+stats_info_count = Counter("bananas_server_tcp_info", "Number of info requests", ["content_type"])
+stats_info_bytes = Summary("bananas_server_tcp_info_bytes", "Bytes used for info requests", ["content_type"])
 
 
 class Application:
@@ -56,7 +67,7 @@ class Application:
         for region in content_entry.regions:
             self._tags_add_region(tags, region)
 
-        await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
+        return await source.protocol.send_PACKET_CONTENT_SERVER_INFO(
             content_type=content_entry.content_type,
             content_id=content_entry.content_id,
             filesize=content_entry.filesize,
@@ -112,7 +123,10 @@ class Application:
 
                 versions[branch] = [int(p) for p in version.split(".")]
 
+        stats_listing_count.labels(content_type=get_folder_name_from_content_type(content_type)).inc()
+
         bootstrap_content_entry = None
+        len = 0
 
         # Make sure the first entry we sent is the bootstrap base graphics,
         # as this is the one the OpenTTD client will use in the bootstrap.
@@ -124,7 +138,7 @@ class Application:
             if not bootstrap_content_entry:
                 log.error(f"Bootstrap package with unique-id {self._bootstrap_unique_id} not found")
             else:
-                await self._send_content_entry(source, bootstrap_content_entry)
+                len += await self._send_content_entry(source, bootstrap_content_entry)
 
         for content_entry in self._by_content_type.get(content_type, []):
             if content_entry == bootstrap_content_entry:
@@ -152,13 +166,21 @@ class Application:
                     # we will be skipping this entry.
                     continue
 
-            await self._send_content_entry(source, content_entry)
+            len += await self._send_content_entry(source, content_entry)
+
+        stats_listing_bytes.labels(content_type=get_folder_name_from_content_type(content_type)).observe(len)
 
     async def receive_PACKET_CONTENT_CLIENT_INFO_EXTID(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_unique_id(content_info.content_type, content_info.unique_id)
             if content_entry:
-                await self._send_content_entry(source, content_entry)
+                stats_info_count.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+                len = await self._send_content_entry(source, content_entry)
+                stats_info_bytes.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).observe(len)
 
     async def receive_PACKET_CONTENT_CLIENT_INFO_EXTID_MD5(self, source, content_infos):
         for content_info in content_infos:
@@ -166,19 +188,35 @@ class Application:
                 content_info.content_type, content_info.unique_id, content_info.md5sum
             )
             if content_entry:
-                await self._send_content_entry(source, content_entry)
+                stats_info_count.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+                len = await self._send_content_entry(source, content_entry)
+                stats_info_bytes.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).observe(len)
 
     async def receive_PACKET_CONTENT_CLIENT_INFO_ID(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_content_id(content_info.content_id)
             if content_entry:
-                await self._send_content_entry(source, content_entry)
+                stats_info_count.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+                len = await self._send_content_entry(source, content_entry)
+                stats_info_bytes.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).observe(len)
 
     async def receive_PACKET_CONTENT_CLIENT_CONTENT(self, source, content_infos):
         for content_info in content_infos:
             content_entry = self.get_by_content_id(content_info.content_id)
             if not content_entry:
                 continue
+
+            stats_download_count.labels(
+                content_type=get_folder_name_from_content_type(content_entry.content_type)
+            ).inc()
 
             try:
                 with self.storage.get_stream(content_entry) as stream:
@@ -200,6 +238,10 @@ class Application:
             except Exception:
                 log.exception("Error with storage, aborting for this client ...")
                 raise SocketClosed
+
+            stats_download_bytes.labels(
+                content_type=get_folder_name_from_content_type(content_entry.content_type)
+            ).observe(content_entry.filesize)
 
     async def reload(self):
         await self._reload_busy.wait()

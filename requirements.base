@@ -6,5 +6,6 @@ marshmallow
 marshmallow-enum
 openttd-helpers
 openttd-protocol
+prometheus-client
 PyYAML
 sentry-sdk

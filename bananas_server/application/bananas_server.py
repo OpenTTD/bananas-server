@@ -19,6 +19,7 @@ from ..storage.exceptions import StreamReadError
 log = logging.getLogger(__name__)
 stats_download_count = Counter("bananas_server_tcp_download", "Number of downloads", ["content_type"])
 stats_download_bytes = Summary("bananas_server_tcp_download_bytes", "Bytes used for downloads", ["content_type"])
+stats_download_failed = Counter("bananas_server_tcp_download_failed", "Number of failed downloads", ["content_type"])
 stats_listing_count = Counter("bananas_server_tcp_listing", "Number of listings", ["content_type"])
 stats_listing_bytes = Summary("bananas_server_tcp_listing_bytes", "Bytes used for listings", ["content_type"])
 stats_info_count = Counter("bananas_server_tcp_info", "Number of info requests", ["content_type"])
@@ -228,14 +229,26 @@ class Application:
                         stream=stream,
                     )
             except StreamReadError:
+                stats_download_failed.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+
                 # Reading from the backend failed; we don't have many options
                 # except to abort the connection and hope the user retries.
                 raise SocketClosed
             except SocketClosed:
+                stats_download_failed.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+
                 # The user terminated it's connection; our caller knows how to
                 # handle this signal.
                 raise
             except Exception:
+                stats_download_failed.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                ).inc()
+
                 log.exception("Error with storage, aborting for this client ...")
                 raise SocketClosed
 

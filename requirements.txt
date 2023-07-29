@@ -16,8 +16,9 @@ marshmallow==3.20.1
 marshmallow-enum==1.5.1
 multidict==6.0.4
 openttd-helpers==1.4.0
-openttd-protocol==1.5.0
+openttd-protocol==1.6.0
 packaging==23.1
+prometheus-client==0.17.1
 python-dateutil==2.8.2
 PyYAML==6.0.1
 s3transfer==0.6.1

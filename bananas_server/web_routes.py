@@ -7,12 +7,23 @@ import random
 from aiohttp import web
 from openttd_helpers import click_helper
 from openttd_protocol.protocol.content import ContentProtocol
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    generate_latest,
+    Summary,
+)
 
 from .helpers.content_type import get_folder_name_from_content_type
 from .helpers.safe_filename import safe_filename
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
+stats_websocket_count = Counter("bananas_server_websocket", "Number of websocket connections")
+stats_websocket_duration = Summary(
+    "bananas_server_websocket_duration_seconds", "Duration, in seconds, websockets has been open"
+)
+
 
 RELOAD_SECRET = None
 TRUST_FORWARDED_HEADERS = False
@@ -122,8 +133,9 @@ async def websocket(request):
     ws = web.WebSocketResponse(protocols=["binary"])
     await ws.prepare(request)
 
+    stats_websocket_count.inc()
+
     source = request.transport.get_extra_info("peername")
-    print(source)
 
     protocol = ContentProtocol(BANANAS_SERVER_APPLICATION)
     protocol.proxy_protocol = False
@@ -131,24 +143,26 @@ async def websocket(request):
 
     ws.do_exit = False
 
-    try:
-        async for msg in ws:
-            # The transport requested that we close down.
-            if ws.do_exit:
-                await ws.close()
-                break
+    with stats_websocket_duration.time():
+        try:
+            async for msg in ws:
+                # The transport requested that we close down.
+                if ws.do_exit:
+                    await ws.close()
+                    break
 
-            if msg.type == aiohttp.WSMsgType.BINARY:
-                protocol.data_received(msg.data)
-            else:
-                # Either unknown protocol or an error; either way, terminate
-                # the connection.
-                await ws.close()
-                break
-    except Exception:
-        log.exception("WebSocket exception")
+                if msg.type == aiohttp.WSMsgType.BINARY:
+                    protocol.data_received(msg.data)
+                else:
+                    # Either unknown protocol or an error; either way, terminate
+                    # the connection.
+                    await ws.close()
+                    break
+        except Exception:
+            log.exception("WebSocket exception")
 
-    protocol.connection_lost(None)
+        protocol.connection_lost(None)
+
     return ws
 
 
@@ -173,6 +187,16 @@ async def reload(request):
 @routes.get("/healthz")
 async def healthz_handler(request):
     return web.HTTPOk()
+
+
+@routes.get("/metrics")
+async def metrics_handler(request):
+    return web.Response(
+        body=generate_latest(),
+        headers={
+            "Content-Type": CONTENT_TYPE_LATEST,
+        },
+    )
 
 
 @routes.get("/")

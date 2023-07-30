@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 stats_download_count = Counter("bananas_server_tcp_download", "Number of downloads", ["content_type"])
 stats_download_bytes = Summary("bananas_server_tcp_download_bytes", "Bytes used for downloads", ["content_type"])
 stats_download_failed = Counter("bananas_server_tcp_download_failed", "Number of failed downloads", ["content_type"])
-stats_listing_count = Counter("bananas_server_tcp_listing", "Number of listings", ["content_type"])
+stats_listing_count = Counter("bananas_server_tcp_listing", "Number of listings", ["content_type", "version"])
 stats_listing_bytes = Summary("bananas_server_tcp_listing_bytes", "Bytes used for listings", ["content_type"])
 stats_info_count = Counter("bananas_server_tcp_info", "Number of info requests", ["content_type"])
 stats_info_bytes = Summary("bananas_server_tcp_info_bytes", "Bytes used for info requests", ["content_type"])
@@ -124,7 +124,19 @@ class Application:
 
                 versions[branch] = [int(p) for p in version.split(".")]
 
-        stats_listing_count.labels(content_type=get_folder_name_from_content_type(content_type)).inc()
+        version_stats = None
+        for branch, branch_version in versions.items():
+            if branch == "vanilla":
+                # Only use "vanilla" if no other branch is given.
+                if version_stats is None:
+                    version_stats = f"{branch}-" + ".".join([str(v) for v in branch_version])
+            else:
+                version_stats = f"{branch}-" + ".".join([str(v) for v in branch_version])
+
+        stats_listing_count.labels(
+            content_type=get_folder_name_from_content_type(content_type),
+            version=version_stats,
+        ).inc()
 
         bootstrap_content_entry = None
         len = 0

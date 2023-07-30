@@ -152,9 +152,9 @@ class Index:
         size += 1
         for key, value in data.get("classification", {}).items():
             size += len(key) + 2
-            if type(value) == str:
+            if type(value) is str:
                 size += len(value) + 2
-            elif type(value) == bool:
+            elif type(value) is bool:
                 size += len("yes") + 2
             else:
                 raise Exception("Invalid classification value", value)

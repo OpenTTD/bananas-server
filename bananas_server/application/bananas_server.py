@@ -58,9 +58,9 @@ class Application:
         # For backwards compatibility, we send classifications as tags.
         tags = set()
         for key, value in content_entry.classification.items():
-            if type(value) == str:
+            if type(value) is str:
                 tags.add(value)
-            elif type(value) == bool:
+            elif type(value) is bool:
                 if value:
                     tags.add(key)
             else:

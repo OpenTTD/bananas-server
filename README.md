@@ -9,13 +9,13 @@ See [introduction.md](https://github.com/OpenTTD/bananas-api/tree/main/docs/intr
 
 ## Development
 
-This API is written in Python 3.8 with aiohttp, and makes strong use of asyncio.
+This API is written in Python 3.11 with aiohttp, and makes strong use of asyncio.
 
 ### Running a local server
 
 #### Dependencies
 
-- Python3.8 or higher.
+- Python3.11 or higher.
 
 #### Preparing your venv
 

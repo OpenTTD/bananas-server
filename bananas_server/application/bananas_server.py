@@ -17,9 +17,13 @@ from ..helpers.safe_filename import safe_filename
 from ..storage.exceptions import StreamReadError
 
 log = logging.getLogger(__name__)
-stats_download_count = Counter("bananas_server_tcp_download", "Number of downloads", ["content_type"])
-stats_download_bytes = Summary("bananas_server_tcp_download_bytes", "Bytes used for downloads", ["content_type"])
-stats_download_failed = Counter("bananas_server_tcp_download_failed", "Number of failed downloads", ["content_type"])
+stats_download_count = Counter("bananas_server_tcp_download", "Number of downloads", ["content_type", "version"])
+stats_download_bytes = Summary(
+    "bananas_server_tcp_download_bytes", "Bytes used for downloads", ["content_type", "version"]
+)
+stats_download_failed = Counter(
+    "bananas_server_tcp_download_failed", "Number of failed downloads", ["content_type", "version"]
+)
 stats_listing_count = Counter("bananas_server_tcp_listing", "Number of listings", ["content_type", "version"])
 stats_listing_bytes = Summary("bananas_server_tcp_listing_bytes", "Bytes used for listings", ["content_type"])
 stats_info_count = Counter("bananas_server_tcp_info", "Number of info requests", ["content_type"])
@@ -137,6 +141,8 @@ class Application:
             content_type=get_folder_name_from_content_type(content_type),
             version=version_stats,
         ).inc()
+        # Remember version for statistics in later packets.
+        source.version_stats = version_stats
 
         bootstrap_content_entry = None
         len = 0
@@ -228,7 +234,8 @@ class Application:
                 continue
 
             stats_download_count.labels(
-                content_type=get_folder_name_from_content_type(content_entry.content_type)
+                content_type=get_folder_name_from_content_type(content_entry.content_type),
+                version=getattr(source, "version_stats", "unknown"),
             ).inc()
 
             try:
@@ -242,7 +249,8 @@ class Application:
                     )
             except StreamReadError:
                 stats_download_failed.labels(
-                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                    content_type=get_folder_name_from_content_type(content_entry.content_type),
+                    version=getattr(source, "version_stats", "unknown"),
                 ).inc()
 
                 # Reading from the backend failed; we don't have many options
@@ -250,7 +258,8 @@ class Application:
                 raise SocketClosed
             except SocketClosed:
                 stats_download_failed.labels(
-                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                    content_type=get_folder_name_from_content_type(content_entry.content_type),
+                    version=getattr(source, "version_stats", "unknown"),
                 ).inc()
 
                 # The user terminated it's connection; our caller knows how to
@@ -258,14 +267,16 @@ class Application:
                 raise
             except Exception:
                 stats_download_failed.labels(
-                    content_type=get_folder_name_from_content_type(content_entry.content_type)
+                    content_type=get_folder_name_from_content_type(content_entry.content_type),
+                    version=getattr(source, "version_stats", "unknown"),
                 ).inc()
 
                 log.exception("Error with storage, aborting for this client ...")
                 raise SocketClosed
 
             stats_download_bytes.labels(
-                content_type=get_folder_name_from_content_type(content_entry.content_type)
+                content_type=get_folder_name_from_content_type(content_entry.content_type),
+                version=getattr(source, "version_stats", "unknown"),
             ).observe(content_entry.filesize)
 
     async def reload(self):

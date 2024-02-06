@@ -30,6 +30,25 @@ stats_info_count = Counter("bananas_server_tcp_info", "Number of info requests",
 stats_info_bytes = Summary("bananas_server_tcp_info_bytes", "Bytes used for info requests", ["content_type"])
 
 
+IP_TO_VERSION_CACHE = dict()
+
+
+def get_version_from_source(source):
+    if hasattr(source, "version_stats"):
+        return source.version_stats
+
+    return IP_TO_VERSION_CACHE.get(source.ip, "unknown")
+
+
+def set_version_from_source(source, version):
+    source.version_stats = version
+    IP_TO_VERSION_CACHE[source.ip] = version
+
+    # Ensure this cache doesn't grow out of control.
+    if len(IP_TO_VERSION_CACHE) > 1000:
+        IP_TO_VERSION_CACHE.pop(next(iter(IP_TO_VERSION_CACHE)))
+
+
 class Application:
     def __init__(self, storage, index, bootstrap_unique_id):
         super().__init__()
@@ -142,7 +161,7 @@ class Application:
             version=version_stats,
         ).inc()
         # Remember version for statistics in later packets.
-        source.version_stats = version_stats
+        set_version_from_source(source, version_stats)
 
         bootstrap_content_entry = None
         len = 0
@@ -235,7 +254,7 @@ class Application:
 
             stats_download_count.labels(
                 content_type=get_folder_name_from_content_type(content_entry.content_type),
-                version=getattr(source, "version_stats", "unknown"),
+                version=get_version_from_source(source),
             ).inc()
 
             try:
@@ -250,7 +269,7 @@ class Application:
             except StreamReadError:
                 stats_download_failed.labels(
                     content_type=get_folder_name_from_content_type(content_entry.content_type),
-                    version=getattr(source, "version_stats", "unknown"),
+                    version=get_version_from_source(source),
                 ).inc()
 
                 # Reading from the backend failed; we don't have many options
@@ -259,7 +278,7 @@ class Application:
             except SocketClosed:
                 stats_download_failed.labels(
                     content_type=get_folder_name_from_content_type(content_entry.content_type),
-                    version=getattr(source, "version_stats", "unknown"),
+                    version=get_version_from_source(source),
                 ).inc()
 
                 # The user terminated it's connection; our caller knows how to
@@ -268,7 +287,7 @@ class Application:
             except Exception:
                 stats_download_failed.labels(
                     content_type=get_folder_name_from_content_type(content_entry.content_type),
-                    version=getattr(source, "version_stats", "unknown"),
+                    version=get_version_from_source(source),
                 ).inc()
 
                 log.exception("Error with storage, aborting for this client ...")
@@ -276,7 +295,7 @@ class Application:
 
             stats_download_bytes.labels(
                 content_type=get_folder_name_from_content_type(content_entry.content_type),
-                version=getattr(source, "version_stats", "unknown"),
+                version=get_version_from_source(source),
             ).observe(content_entry.filesize)
 
     async def reload(self):

@@ -45,7 +45,7 @@ def set_version_from_source(source, version):
     IP_TO_VERSION_CACHE[source.ip] = version
 
     # Ensure this cache doesn't grow out of control.
-    if len(IP_TO_VERSION_CACHE) > 1000:
+    if len(IP_TO_VERSION_CACHE) > 10000:
         IP_TO_VERSION_CACHE.pop(next(iter(IP_TO_VERSION_CACHE)))
 
 

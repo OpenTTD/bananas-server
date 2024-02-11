@@ -266,6 +266,14 @@ class Application:
                         filename=safe_filename(content_entry),
                         stream=stream,
                     )
+            except asyncio.CancelledError:
+                stats_download_failed.labels(
+                    content_type=get_folder_name_from_content_type(content_entry.content_type),
+                    version=get_version_from_source(source),
+                ).inc()
+
+                # Our coroutine is cancelled, pass it on the the caller.
+                raise
             except StreamReadError:
                 stats_download_failed.labels(
                     content_type=get_folder_name_from_content_type(content_entry.content_type),

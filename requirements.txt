@@ -2,8 +2,8 @@ aiohttp==3.9.5
 aiosignal==1.3.1
 async-timeout==4.0.3
 attrs==23.2.0
-boto3==1.34.137
-botocore==1.34.137
+boto3==1.34.138
+botocore==1.34.138
 certifi==2024.6.2
 charset-normalizer==3.3.2
 click==8.1.7

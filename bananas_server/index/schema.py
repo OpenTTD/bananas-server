@@ -27,8 +27,8 @@ class ContentEntry(Schema):
         keys=fields.String(),
         values=fields.Tuple(
             (
-                fields.List(fields.Integer(), missing=None),
-                fields.List(fields.Integer(), missing=None),
+                fields.List(fields.Integer(), load_default=None),
+                fields.List(fields.Integer(), load_default=None),
             )
         ),
     )

@@ -3,7 +3,6 @@ boto3
 click
 gitpython
 marshmallow
-marshmallow-enum
 openttd-helpers
 openttd-protocol
 prometheus-client

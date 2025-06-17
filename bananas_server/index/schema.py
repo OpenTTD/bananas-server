@@ -3,7 +3,6 @@ from marshmallow import (
     Schema,
     validate,
 )
-from marshmallow_enum import EnumField
 
 from ..helpers.content_type import ContentType
 
@@ -14,7 +13,7 @@ class ContentEntry(Schema):
 
     content_id = fields.Integer(data_key="content-id")
     unique_id = fields.Raw(data_key="unique-id", validate=validate.Length(min=4, max=4))
-    content_type = EnumField(ContentType, data_key="content-type", by_value=True)
+    content_type = fields.Enum(ContentType, data_key="content-type", by_value=True)
     filesize = fields.Integer()
     # Most of these limits are limitations in the OpenTTD client.
     name = fields.String(validate=validate.Length(max=31))
@@ -36,7 +35,7 @@ class ContentEntry(Schema):
     raw_dependencies = fields.List(
         fields.Tuple(
             (
-                EnumField(ContentType, by_value=True),
+                fields.Enum(ContentType, by_value=True),
                 fields.Raw(validate=validate.Length(min=4, max=4)),
                 fields.Raw(validate=validate.Length(min=16, max=16)),
             )

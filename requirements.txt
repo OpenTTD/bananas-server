@@ -13,7 +13,7 @@ gitdb==4.0.12
 GitPython==3.1.44
 idna==3.10
 jmespath==1.0.1
-marshmallow==4.0.0
+marshmallow==4.1.2
 multidict==6.5.0
 openttd-helpers==1.4.0
 openttd-protocol==1.7.1

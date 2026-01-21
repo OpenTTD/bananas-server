@@ -56,7 +56,7 @@ class ContentEntry:
         dependencies = []
 
         for dependency in self.raw_dependencies:
-            (content_type, unique_id, md5sum) = dependency
+            content_type, unique_id, md5sum = dependency
             dep_content_entry = by_unique_id_and_md5sum[content_type].get(unique_id, {}).get(md5sum)
             if dep_content_entry is None:
                 log.error("Invalid dependency: %r", dependency)

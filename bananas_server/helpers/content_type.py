@@ -1,6 +1,5 @@
 from openttd_protocol.protocol.content import ContentType
 
-
 content_type_folder_name_mapping = {
     ContentType.CONTENT_TYPE_BASE_GRAPHICS: "base-graphics",
     ContentType.CONTENT_TYPE_NEWGRF: "newgrf",

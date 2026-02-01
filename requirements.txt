@@ -3,8 +3,8 @@ aiohttp==3.13.3
 aiosignal==1.4.0
 async-timeout==5.0.1
 attrs==25.4.0
-boto3==1.42.32
-botocore==1.42.32
+boto3==1.42.39
+botocore==1.42.39
 certifi==2026.1.4
 charset-normalizer==3.4.4
 click==8.3.1
@@ -12,9 +12,9 @@ frozenlist==1.8.0
 gitdb==4.0.12
 GitPython==3.1.46
 idna==3.11
-jmespath==1.0.1
-marshmallow==4.2.0
-multidict==6.7.0
+jmespath==1.1.0
+marshmallow==4.2.1
+multidict==6.7.1
 openttd-helpers==2.0.0
 openttd-protocol==1.7.1
 packaging==26.0
@@ -23,7 +23,7 @@ propcache==0.4.1
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 s3transfer==0.16.0
-sentry-sdk==2.50.0
+sentry-sdk==2.51.0
 six==1.17.0
 smmap==5.0.2
 typing_extensions==4.15.0

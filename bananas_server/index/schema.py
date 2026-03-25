@@ -5,6 +5,7 @@ from marshmallow import (
 )
 
 from ..helpers.content_type import ContentType
+from ..helpers.availability import Availability
 
 
 class ContentEntry(Schema):
@@ -42,3 +43,4 @@ class ContentEntry(Schema):
         ),
         data_key="raw-dependencies",
     )
+    availability = fields.Enum(Availability, data_key="availability", by_value=True)

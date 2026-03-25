@@ -103,6 +103,7 @@ class Application:
             md5sum=content_entry.md5sum,
             dependencies=content_entry.dependencies,
             tags=list(sorted(tags)),
+            availability=content_entry.availability,
         )
 
     def get_by_content_id(self, content_id):

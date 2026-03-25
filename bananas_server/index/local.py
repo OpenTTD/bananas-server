@@ -10,6 +10,7 @@ from openttd_protocol.protocol.content import ContentType
 from .schema import ContentEntry as ContentEntryTest
 from ..helpers.content_type import get_content_type_from_name
 from ..helpers.content_type import get_folder_name_from_content_type
+from ..helpers.availability import get_int_value_from_string_name
 
 log = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ class Index:
                 "classification": data.get("tagclassifications", {}),
                 "regions": data.get("regions", []),
                 "raw-dependencies": dependencies,
+                "availability": get_int_value_from_string_name(data.get("availability", "")),
             }
         )
 
@@ -149,6 +151,7 @@ class Index:
         size += len(unique_id) + 2
         size += len(md5sum) + 2
         size += len(dependencies) * 4
+        size += 1  # availability
         size += 1
         for key, value in data.get("classification", {}).items():
             size += len(key) + 2
@@ -179,6 +182,7 @@ class Index:
             compatibility=compatibility,
             classification=data.get("classification", {}),
             regions=data.get("regions", []),
+            availability=get_int_value_from_string_name(data.get("availability", "")),
         )
 
         # Calculate the content-id we want to give him, but don't assign it
